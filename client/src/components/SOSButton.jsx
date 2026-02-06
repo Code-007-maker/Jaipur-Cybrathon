@@ -1,43 +1,89 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Phone, X } from 'lucide-react';
+import { Phone, X, Loader2 } from 'lucide-react';
 import api from '../utils/api';
 
 const SOSButton = () => {
     const [isActive, setIsActive] = useState(false);
     const [count, setCount] = useState(5);
+    const [isSending, setIsSending] = useState(false);
     const navigate = useNavigate();
 
     useEffect(() => {
         let timer;
-        if (isActive && count > 0) {
+        if (isActive && count > 0 && !isSending) {
             timer = setTimeout(() => setCount(count - 1), 1000);
-        } else if (isActive && count === 0) {
+        } else if (isActive && count === 0 && !isSending) {
             triggerSOS();
         }
         return () => clearTimeout(timer);
-    }, [isActive, count]);
+    }, [isActive, count, isSending]);
 
     const handlePress = () => {
         setIsActive(true);
         setCount(5);
+        setIsSending(false);
     };
 
     const handleCancel = () => {
         setIsActive(false);
         setCount(5);
+        setIsSending(false);
     };
 
     const triggerSOS = async () => {
-        setIsActive(false);
+        setIsSending(true);
         try {
-            // Mock location for MVP
-            const location = { lat: 37.7749, lng: -122.4194, address: "123 Main St, Tech City" };
-            await api.post('/emergency', { location, severity: 'Critical' });
-            navigate('/emergency');
+            let location = { lat: 0, lng: 0, address: "Unknown Location" };
+
+            // Function to post SOS and navigate
+            const performSOS = async (loc) => {
+                try {
+                    await api.post('/emergency', { location: loc, severity: 'Critical' });
+                    setIsActive(false);
+                    setIsSending(false);
+                    navigate('/emergency');
+                } catch (err) {
+                    console.error("API Error", err);
+                    setIsActive(false);
+                    setIsSending(false);
+                    navigate('/emergency'); // Navigate anyway, page will try to recover
+                }
+            };
+
+            // Try Geolocation with 3s timeout
+            if ("geolocation" in navigator) {
+                const geoOptions = { timeout: 3000, enableHighAccuracy: true };
+
+                navigator.geolocation.getCurrentPosition(
+                    async (position) => {
+                        const { latitude, longitude } = position.coords;
+                        location = { lat: latitude, lng: longitude, address: `${latitude.toFixed(4)}, ${longitude.toFixed(4)}` };
+
+                        try {
+                            const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`);
+                            const data = await response.json();
+                            location.address = data.display_name;
+                        } catch (e) {
+                            console.error("Geocoding error", e);
+                        }
+
+                        await performSOS(location);
+                    },
+                    async (error) => {
+                        console.error("Geo Error", error);
+                        await performSOS(location);
+                    },
+                    geoOptions
+                );
+            } else {
+                await performSOS(location);
+            }
         } catch (err) {
             console.error("SOS Trigger Failed", err);
+            setIsSending(false);
+            setIsActive(false);
         }
     };
 
@@ -49,18 +95,34 @@ const SOSButton = () => {
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        className="fixed inset-0 bg-red-600/90 backdrop-blur-sm z-50 flex flex-col items-center justify-center text-white"
+                        className="fixed inset-0 bg-red-600/90 backdrop-blur-sm z-50 flex flex-col items-center justify-center text-white p-6 text-center"
                     >
-                        <h1 className="text-4xl font-black mb-4 animate-pulse">EMERGENCY SOS</h1>
-                        <div className="text-9xl font-bold mb-8">{count}</div>
-                        <p className="text-xl mb-12 font-medium">Sending alert to nearby responders...</p>
+                        <h1 className="text-4xl font-black mb-4 animate-pulse">
+                            {isSending ? "INITIATING SOS..." : "EMERGENCY SOS"}
+                        </h1>
 
-                        <button
-                            onClick={handleCancel}
-                            className="bg-white text-red-600 px-8 py-4 rounded-full font-bold text-xl flex items-center gap-2 hover:scale-105 transition-transform"
-                        >
-                            <X className="w-6 h-6" /> CANCEL ALERT
-                        </button>
+                        {!isSending ? (
+                            <div className="text-9xl font-bold mb-8">{count}</div>
+                        ) : (
+                            <div className="mb-8">
+                                <Loader2 className="w-24 h-24 animate-spin mx-auto opacity-50" />
+                            </div>
+                        )}
+
+                        <p className="text-xl mb-12 font-medium max-w-md">
+                            {isSending
+                                ? "Pinpointing your location and alerting emergency responders. Please hold on..."
+                                : "A critical alert will be sent to your emergency contacts and nearby medical responders."}
+                        </p>
+
+                        {!isSending && (
+                            <button
+                                onClick={handleCancel}
+                                className="bg-white text-red-600 px-8 py-4 rounded-full font-bold text-xl flex items-center gap-2 hover:scale-105 transition-transform"
+                            >
+                                <X className="w-6 h-6" /> CANCEL ALERT
+                            </button>
+                        )}
                     </motion.div>
                 )}
             </AnimatePresence>

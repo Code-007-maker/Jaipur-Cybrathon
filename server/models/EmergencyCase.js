@@ -26,6 +26,15 @@ const EmergencyCaseSchema = new mongoose.Schema({
             timestamp: { type: Date, default: Date.now }
         }
     ],
+    notificationsSent: [
+        {
+            contactName: String,
+            phone: String,
+            email: String,
+            status: { type: String, default: 'Sent' },
+            timestamp: { type: Date, default: Date.now }
+        }
+    ],
     createdAt: { type: Date, default: Date.now }
 });
 

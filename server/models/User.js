@@ -14,7 +14,8 @@ const UserSchema = new mongoose.Schema({
         {
             name: { type: String },
             relation: { type: String },
-            phone: { type: String }
+            phone: { type: String },
+            email: { type: String }
         }
     ],
     role: { type: String, enum: ['patient', 'doctor', 'responder'], default: 'patient' },
