@@ -50,7 +50,12 @@ const Dashboard = () => {
     const fetchHistory = async () => {
         try {
             const res = await api.get('/emergency/history');
-            setEmergencyHistory(res.data);
+            if (Array.isArray(res.data)) {
+                setEmergencyHistory(res.data);
+            } else {
+                console.error("Emergency history data is not an array:", res.data);
+                setEmergencyHistory([]);
+            }
         } catch (err) {
             console.error("Error fetching history:", err);
         } finally {
@@ -486,7 +491,7 @@ const Dashboard = () => {
                         <div className="mt-4 space-y-6 relative pl-4 border-l-2 border-slate-100 dark:border-slate-700 min-h-[100px]">
                             {loadingHistory ? (
                                 <p className="text-sm text-slate-500 py-4 italic">Loading history...</p>
-                            ) : emergencyHistory.length > 0 ? (
+                            ) : (Array.isArray(emergencyHistory) && emergencyHistory.length > 0) ? (
                                 emergencyHistory.map((item, idx) => (
                                     <div key={item._id} className="relative">
                                         <div className={clsx(
