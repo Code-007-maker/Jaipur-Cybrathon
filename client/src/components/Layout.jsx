@@ -1,7 +1,8 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import SOSButton from './SOSButton';
-import { Activity, Home, FileText, MessageSquare, LogOut, Menu, X, Ambulance } from 'lucide-react';
+import SessionTimer from './SessionTimer';
+import { Activity, Home, FileText, MessageSquare, LogOut, Menu, X, Ambulance, ShieldCheck } from 'lucide-react';
 import { useState } from 'react';
 import clsx from 'clsx';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -36,7 +37,7 @@ const Layout = ({ children }) => {
         { name: t('nav.dashboard'), path: '/', icon: Home },
         { name: t('nav.triage'), path: '/triage', icon: Activity },
         { name: t('nav.emergency'), path: '/emergency', icon: Ambulance, className: 'text-red-500 font-bold' },
-        { name: t('nav.findHospital'), path: '/map', icon: FileText }, // Placeholder icon choice
+        { name: t('nav.findHospital'), path: '/map', icon: FileText },
         { name: t('nav.aiMedic'), path: '/chat', icon: MessageSquare },
     ];
 
@@ -112,12 +113,16 @@ const Layout = ({ children }) => {
 
                     <div className={clsx("p-4 border-t", theme === 'dark' ? 'border-slate-700' : 'border-slate-100')}>
                         <div className="flex items-center gap-3 mb-4 px-2">
-                            <div className="w-10 h-10 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-slate-600 dark:text-slate-300 font-bold">
-                                {user?.name?.[0] || 'U'}
+                            <div className="w-10 h-10 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-slate-600 dark:text-slate-300 font-bold relative group">
+                                {user?.role === 'doctor' ? <ShieldCheck className="w-6 h-6 text-emerald-500" /> : (user?.name?.[0] || 'U')}
                             </div>
                             <div>
-                                <p className={clsx("text-sm font-semibold truncate w-32", theme === 'dark' ? 'text-white' : 'text-slate-800')}>{user?.name}</p>
-                                <p className="text-xs text-slate-500 dark:text-slate-400">Patient ID: #8821</p>
+                                <p className={clsx("text-sm font-semibold truncate w-32", theme === 'dark' ? 'text-white' : 'text-slate-800')}>
+                                    {user?.role === 'doctor' ? `Dr. ${user.name.replace('Dr. ', '')}` : user?.name}
+                                </p>
+                                <p className="text-xs text-slate-500 dark:text-slate-400">
+                                    {user?.role === 'doctor' ? 'Secure Access' : 'Patient ID: #8821'}
+                                </p>
                             </div>
                         </div>
                         <button
@@ -192,6 +197,7 @@ const Layout = ({ children }) => {
 
             {/* Main Content */}
             <main className={clsx('min-h-screen transition-all duration-300', isAuthenticated ? 'lg:pl-64 pt-20 lg:pt-0' : '')}>
+                {isAuthenticated && <SessionTimer />}
                 <div className="p-4 lg:p-8 max-w-7xl mx-auto">
                     {children}
                 </div>

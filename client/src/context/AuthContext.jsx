@@ -85,6 +85,30 @@ export const AuthProvider = ({ children }) => {
         }
     };
 
+    const initDoctorLogin = async (formData) => {
+        try {
+            const res = await api.post('/auth/doctor-login-init', formData);
+            return res.data;
+        } catch (err) {
+            throw err.response?.data || { msg: 'Failed to send OTP' };
+        }
+    };
+
+    const verifyDoctorOTP = async (formData) => {
+        try {
+            const res = await api.post('/auth/doctor-login-verify', formData);
+            localStorage.setItem('token', res.data.token);
+            dispatch({ type: 'LOGIN_SUCCESS', payload: res.data });
+            // For doctors, we don't necessarily call loadUser() because the user object returned by verify is enough
+            // and contains doctor-specific fields (like expiresAt)
+            return res.data;
+        } catch (err) {
+            localStorage.removeItem('token');
+            dispatch({ type: 'LOGIN_FAIL' });
+            throw err.response?.data || { msg: 'OTP verification failed' };
+        }
+    };
+
     const updateProfile = async (formData) => {
         try {
             const res = await api.put('/auth/profile', formData);
@@ -106,7 +130,7 @@ export const AuthProvider = ({ children }) => {
     }, []);
 
     return (
-        <AuthContext.Provider value={{ ...state, register, login, logout, updateProfile }}>
+        <AuthContext.Provider value={{ ...state, register, login, logout, updateProfile, initDoctorLogin, verifyDoctorOTP }}>
             {children}
         </AuthContext.Provider>
     );
