@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { QrCode, Heart, Activity, AlertCircle, Calendar, Phone, Edit3, MapPin, X, Plus, Trash2, Save, Send, Trash, Loader2 } from 'lucide-react';
+import { QrCode, Heart, Activity, AlertCircle, Calendar, Phone, Edit3, MapPin, Save, X, Plus, Trash2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../context/ThemeContext';
@@ -17,6 +17,8 @@ const Dashboard = () => {
     const [isEditingPhone, setIsEditingPhone] = useState(false);
     const [isEditingMedical, setIsEditingMedical] = useState(false);
     const [isEditingEmergency, setIsEditingEmergency] = useState(false);
+    const [isEditingPastEmergencies, setIsEditingPastEmergencies] = useState(false);
+    const [showQrModal, setShowQrModal] = useState(false);
     const [emergencyHistory, setEmergencyHistory] = useState([]);
     const [loadingHistory, setLoadingHistory] = useState(true);
     const [showQrModal, setShowQrModal] = useState(false);
@@ -54,7 +56,12 @@ const Dashboard = () => {
     const fetchHistory = async () => {
         try {
             const res = await api.get('/emergency/history');
-            setEmergencyHistory(res.data);
+            if (Array.isArray(res.data)) {
+                setEmergencyHistory(res.data);
+            } else {
+                console.error("Emergency history data is not an array:", res.data);
+                setEmergencyHistory([]);
+            }
         } catch (err) {
             console.error("Error fetching history:", err);
         } finally {
@@ -616,43 +623,94 @@ const Dashboard = () => {
                         )}
                     >
                         <div className="flex items-center justify-between mb-4">
-                            <h2 className={clsx("text-xl font-bold", theme === 'dark' ? "text-white" : "text-slate-900")}>{t('dashboard.pastEmergencies')}</h2>
-                            <button
-                                onClick={fetchHistory}
-                                className="text-slate-400 hover:text-blue-600 transition-colors"
-                                title="Refresh History"
-                            >
-                                <Activity className={clsx("w-4 h-4", loadingHistory && "animate-spin")} />
-                            </button>
+                            <h2 className={clsx("text-xl font-bold", isDarkMode ? "text-white" : "text-slate-900")}>{t('dashboard.pastEmergencies')}</h2>
+                            {!isEditingPastEmergencies ? (
+                                <button onClick={() => setIsEditingPastEmergencies(true)} className="text-blue-600 p-2"><Edit3 className="w-5 h-5" /></button>
+                            ) : (
+                                <div className="flex gap-2">
+                                    <button onClick={() => setIsEditingPastEmergencies(false)} className="text-slate-400 p-2"><X className="w-5 h-5" /></button>
+                                    <button onClick={() => handleSave('pastEmergencies')} className="text-green-500 p-2"><Save className="w-5 h-5" /></button>
+                                </div>
+                            )}
                         </div>
-                        <div className="mt-4 space-y-6 relative pl-4 border-l-2 border-slate-100 dark:border-slate-700 min-h-[100px]">
-                            {loadingHistory ? (
-                                <p className="text-sm text-slate-500 py-4 italic">Loading history...</p>
-                            ) : emergencyHistory.length > 0 ? (
-                                emergencyHistory.map((item, idx) => (
-                                    <div key={item._id} className="relative">
-                                        <div className={clsx(
-                                            "absolute -left-[21px] top-1 w-3 h-3 rounded-full ring-4 ring-white dark:ring-slate-800",
-                                            item.status === 'resolved' ? "bg-green-500" : "bg-red-400"
-                                        )}></div>
-                                        <p className="text-[10px] text-slate-400 font-bold uppercase mb-0.5">
-                                            {new Date(item.createdAt).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' })}
-                                        </p>
-                                        <p className={clsx("font-semibold leading-tight", theme === 'dark' ? "text-slate-200" : "text-slate-800")}>
-                                            {item.severity} Emergency
-                                        </p>
-                                        <p className="text-[11px] text-slate-500 mt-1">
-                                            {item.location?.address?.split(',').slice(0, 2).join(',') || "Location unavailable"}
-                                        </p>
-                                        <div className="mt-2 flex gap-2">
-                                            <span className="px-2 py-0.5 bg-slate-100 dark:bg-slate-700 rounded-md text-[9px] font-bold text-slate-500 uppercase">
-                                                {item.status}
-                                            </span>
-                                        </div>
+
+                        <div className={clsx(
+                            "space-y-4 relative",
+                            !isEditingPastEmergencies && "pl-4 border-l-2",
+                            isDarkMode ? "border-slate-700" : "border-slate-100"
+                        )}>
+                            {formData.pastEmergencies?.length > 0 ? (
+                                formData.pastEmergencies.map((emergency, i) => (
+                                    <div key={emergency.id || i} className="relative">
+                                        {isEditingPastEmergencies ? (
+                                            <div className={clsx(
+                                                "p-3 rounded-xl border space-y-2",
+                                                isDarkMode ? "bg-slate-700/50 border-slate-600" : "bg-slate-50 border-slate-100"
+                                            )}>
+                                                <div className="flex gap-2">
+                                                    <input
+                                                        type="date"
+                                                        value={emergency.date}
+                                                        onChange={(e) => handlePastEmergencyChange(i, 'date', e.target.value)}
+                                                        className={clsx("flex-1 p-2 text-sm rounded border", isDarkMode ? "bg-slate-600 border-slate-500 text-white" : "bg-white border-slate-200")}
+                                                    />
+                                                    <button onClick={() => handleRemovePastEmergency(i)} className="text-red-500 p-1"><Trash2 className="w-4 h-4" /></button>
+                                                </div>
+                                                <input
+                                                    placeholder={t('dashboard.eventTitle')}
+                                                    value={emergency.title}
+                                                    onChange={(e) => handlePastEmergencyChange(i, 'title', e.target.value)}
+                                                    className={clsx("w-full p-2 text-sm rounded border", isDarkMode ? "bg-slate-600 border-slate-500 text-white" : "bg-white border-slate-200")}
+                                                />
+                                                <input
+                                                    placeholder={t('dashboard.location')}
+                                                    value={emergency.location}
+                                                    onChange={(e) => handlePastEmergencyChange(i, 'location', e.target.value)}
+                                                    className={clsx("w-full p-2 text-sm rounded border", isDarkMode ? "bg-slate-600 border-slate-500 text-white" : "bg-white border-slate-200")}
+                                                />
+                                                <select
+                                                    value={emergency.status}
+                                                    onChange={(e) => handlePastEmergencyChange(i, 'status', e.target.value)}
+                                                    className={clsx("w-full p-2 text-sm rounded border", isDarkMode ? "bg-slate-600 border-slate-500 text-white" : "bg-white border-slate-200")}
+                                                >
+                                                    <option value="discharged">Discharged</option>
+                                                    <option value="complete">Complete</option>
+                                                    <option value="ongoing">Ongoing</option>
+                                                </select>
+                                            </div>
+                                        ) : (
+                                            <>
+                                                <div className={clsx(
+                                                    "absolute -left-[21px] top-1 w-3 h-3 rounded-full ring-4",
+                                                    getStatusColor(emergency.status),
+                                                    isDarkMode ? "ring-slate-800" : "ring-white"
+                                                )}></div>
+                                                <p className="text-sm text-slate-500 mb-1">{emergency.date}</p>
+                                                <p className={clsx("font-semibold", isDarkMode ? "text-slate-200" : "text-slate-800")}>{emergency.title}</p>
+                                                <p className="text-xs text-slate-500">{emergency.location} • {emergency.status}</p>
+                                            </>
+                                        )}
                                     </div>
                                 ))
                             ) : (
-                                <p className="text-sm text-slate-500 py-4 italic text-center">No past emergencies found.</p>
+                                !isEditingPastEmergencies && (
+                                    <p className="text-center text-sm text-slate-500 py-4">{t('dashboard.noEmergencies')}</p>
+                                )
+                            )}
+
+                            {isEditingPastEmergencies && (
+                                <button
+                                    onClick={handleAddPastEmergency}
+                                    className={clsx(
+                                        "w-full py-3 border border-dashed rounded-xl font-medium transition-colors flex items-center justify-center gap-2",
+                                        isDarkMode
+                                            ? "border-slate-600 text-slate-400 hover:bg-slate-700 hover:text-blue-400"
+                                            : "border-slate-300 text-slate-500 hover:bg-slate-50 hover:text-blue-600"
+                                    )}
+                                >
+                                    <Plus className="w-4 h-4" />
+                                    {t('dashboard.addEmergency')}
+                                </button>
                             )}
                         </div>
                     </motion.div>

@@ -2,9 +2,9 @@ import { useState, useEffect } from 'react';
 import { io } from 'socket.io-client';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { MapPin, Phone, Shield, Search, CheckCircle, Ambulance, Bell, Check } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../context/ThemeContext';
+import { MapPin, Phone, Shield, Search, CheckCircle, Ambulance } from 'lucide-react';
 import { motion } from 'framer-motion';
 import api from '../utils/api';
 import clsx from 'clsx';
@@ -13,6 +13,15 @@ const Emergency = () => {
     const { user } = useAuth();
     const { t } = useTranslation();
     const { theme } = useTheme();
+    const isDarkMode = theme === 'dark';
+
+    const steps = [
+        { id: 'searching', label: t('emergency.searching'), icon: Search },
+        { id: 'assigned', label: t('emergency.assigned'), icon: Shield },
+        { id: 'en_route', label: t('emergency.enRoute'), icon: Ambulance },
+        { id: 'arrived', label: t('emergency.arrived'), icon: CheckCircle },
+    ];
+
     const [activeCase, setActiveCase] = useState(null);
     const [loading, setLoading] = useState(true);
     const [isResolving, setIsResolving] = useState(false);
@@ -41,7 +50,7 @@ const Emergency = () => {
         fetchActive();
 
         // Socket Connection
-        const newSocket = io('http://localhost:5000');
+        const newSocket = io(import.meta.env.VITE_SOCKET_URL || window.location.origin);
 
         if (user?.id) {
             newSocket.on(`emergency_update_${user.id}`, (updatedCase) => {
@@ -58,21 +67,13 @@ const Emergency = () => {
         return steps.findIndex(s => s.id === activeCase.status);
     };
 
-    const handleResolve = async () => {
-        setIsResolving(true);
-        try {
-            await api.post('/emergency/resolve', { caseId: activeCase._id });
-            setActiveCase(null);
-            navigate('/'); // Go back to dashboard to see history
-        } catch (err) {
-            console.error(err);
-            alert("Failed to resolve case");
-        } finally {
-            setIsResolving(false);
-        }
-    };
+    if (loading) return (
+        <div className={clsx(
+            "p-10 text-center",
+            isDarkMode ? "text-slate-300" : "text-slate-600"
+        )}>{t('emergency.loading')}</div>
+    );
 
-    if (loading) return <div className="p-10 text-center">Loading Emergency Status...</div>;
     if (!activeCase || activeCase.status === 'cancelled' || activeCase.status === 'resolved') {
         return (
             <div className="flex flex-col items-center justify-center h-[60vh] text-center">
@@ -201,12 +202,24 @@ const Emergency = () => {
                 )}
 
                 {/* Map Placeholder */}
-                <div className="bg-slate-200 dark:bg-slate-800 rounded-3xl min-h-[300px] flex items-center justify-center relative overflow-hidden group">
-                    <div className="absolute inset-0 bg-[url('https://cartodb-basemaps-a.global.ssl.fastly.net/light_all/13/1310/3166.png')] bg-cover opacity-50 dark:opacity-20"></div>
+                <div className={clsx(
+                    "rounded-3xl min-h-[300px] flex items-center justify-center relative overflow-hidden group",
+                    isDarkMode ? "bg-slate-700" : "bg-slate-200"
+                )}>
+                    <div className="absolute inset-0 bg-[url('https://cartodb-basemaps-a.global.ssl.fastly.net/light_all/13/1310/3166.png')] bg-cover opacity-50"></div>
                     <div className="relative z-10 text-center">
-                        <MapPin className="w-12 h-12 text-slate-500 mx-auto mb-2" />
-                        <p className="font-bold text-slate-600 dark:text-slate-400">Live Location Tracking</p>
-                        <p className="text-sm text-slate-500">Map view is loading...</p>
+                        <MapPin className={clsx(
+                            "w-12 h-12 mx-auto mb-2",
+                            isDarkMode ? "text-slate-400" : "text-slate-500"
+                        )} />
+                        <p className={clsx(
+                            "font-bold",
+                            isDarkMode ? "text-slate-300" : "text-slate-600"
+                        )}>{t('emergency.liveLocation')}</p>
+                        <p className={clsx(
+                            "text-sm",
+                            isDarkMode ? "text-slate-400" : "text-slate-500"
+                        )}>{t('emergency.mapLoading')}</p>
                     </div>
                 </div>
             </div>

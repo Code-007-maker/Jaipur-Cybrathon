@@ -1,12 +1,14 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Activity, Check, AlertTriangle, Thermometer, Wind, Heart, ChevronRight, Loader2 } from 'lucide-react';
+import { Activity, Check, AlertTriangle, Thermometer, Wind, Heart, ChevronRight, Loader2, MapPin } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../context/ThemeContext';
 import api from '../utils/api';
 import clsx from 'clsx';
 
 const Triage = () => {
+    const navigate = useNavigate();
     const { t } = useTranslation();
     const { theme } = useTheme();
     const isDarkMode = theme === 'dark';
@@ -141,17 +143,30 @@ const Triage = () => {
                         </div>
                     </div>
 
-                    <button
-                        onClick={() => window.location.reload()}
-                        className={clsx(
-                            "w-full py-4 rounded-xl font-bold transition-colors",
-                            isDarkMode
-                                ? "bg-white text-slate-900 hover:bg-slate-200"
-                                : "bg-slate-900 text-white hover:bg-slate-800"
-                        )}
-                    >
-                        {t('triage.newAssessment')}
-                    </button>
+                    <div className="flex gap-4">
+                        <button
+                            onClick={() => window.location.reload()}
+                            className={clsx(
+                                "flex-1 py-4 rounded-xl font-bold transition-colors",
+                                isDarkMode
+                                    ? "bg-slate-700 text-white hover:bg-slate-600"
+                                    : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                            )}
+                        >
+                            {t('triage.newAssessment')}
+                        </button>
+                        <button
+                            onClick={() => navigate('/map', { state: { specialty: result.recommendedSpecialty, severity: result.severity } })}
+                            className={clsx(
+                                "flex-1 py-4 rounded-xl font-bold transition-colors shadow-lg",
+                                isDarkMode
+                                    ? "bg-blue-600 text-white hover:bg-blue-700 shadow-blue-900/30"
+                                    : "bg-blue-600 text-white hover:bg-blue-700 shadow-blue-200"
+                            )}
+                        >
+                            Find Suitable Hospitals
+                        </button>
+                    </div>
                 </motion.div>
             ) : (
                 <div className={clsx(
