@@ -1,0 +1,26 @@
+{
+    "dashboard": {
+        "title": "Health Wallet",
+        "subtitle": "Your Medical Identity & History",
+        "showEmergencyId": "Show Emergency ID",
+        "bloodType": "Blood Type",
+        "age": "Age",
+        "allergies": "Allergies",
+        "lastVisit": "Last Visit",
+        "personalInfo": "Personal Information",
+        "fullName": "Full Name",
+        "email": "Email",
+        "phone": "Phone",
+        "address": "Address",
+        "medicalProfile": "Medical Profile",
+        "chronicConditions": "Chronic Conditions",
+        "emergencyContacts": "Emergency Contacts",
+        "addContact": "Add Contact",
+        "pastEmergencies": "Past Emergencies",
+        "save": "Save",
+        "cancel": "Cancel",
+        "edit": "Edit",
+        "none": "N/A",
+        "liveLocation": "Live Location"
+    }
+}

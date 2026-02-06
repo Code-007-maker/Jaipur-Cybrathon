@@ -85,6 +85,17 @@ export const AuthProvider = ({ children }) => {
         }
     };
 
+    const updateProfile = async (formData) => {
+        try {
+            const res = await api.put('/auth/profile', formData);
+            dispatch({ type: 'USER_LOADED', payload: res.data });
+            return res.data;
+        } catch (err) {
+            console.error('Update Profile Error:', err);
+            throw err.response?.data || { msg: 'Update failed' };
+        }
+    };
+
     const logout = () => {
         localStorage.removeItem('token');
         dispatch({ type: 'LOGOUT' });
@@ -95,7 +106,7 @@ export const AuthProvider = ({ children }) => {
     }, []);
 
     return (
-        <AuthContext.Provider value={{ ...state, register, login, logout }}>
+        <AuthContext.Provider value={{ ...state, register, login, logout, updateProfile }}>
             {children}
         </AuthContext.Provider>
     );

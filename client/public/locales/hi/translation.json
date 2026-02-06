@@ -1,0 +1,26 @@
+{
+    "dashboard": {
+        "title": "हेल्थ वॉलेट",
+        "subtitle": "आपकी मेडिकल पहचान और इतिहास",
+        "showEmergencyId": "आपातकालीन आईडी दिखाएं",
+        "bloodType": "रक्त समूह",
+        "age": "आयु",
+        "allergies": "एलर्जी",
+        "lastVisit": "पिछली मुलाकात",
+        "personalInfo": "व्यक्तिगत जानकारी",
+        "fullName": "पूरा नाम",
+        "email": "ईमेल",
+        "phone": "फ़ोन",
+        "address": "पता",
+        "medicalProfile": "मेडिकल प्रोफाइल",
+        "chronicConditions": "पुरानी बीमारियां",
+        "emergencyContacts": "आपातकालीन संपर्क",
+        "addContact": "संपर्क जोड़ें",
+        "pastEmergencies": "पिछले आपातकाल",
+        "save": "सहेजें",
+        "cancel": "रद्द करें",
+        "edit": "संपादित करें",
+        "none": "उपलब्ध नहीं",
+        "liveLocation": "लाइव लोकेशन"
+    }
+}
