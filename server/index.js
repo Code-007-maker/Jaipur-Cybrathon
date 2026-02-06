@@ -63,8 +63,8 @@ app.use('/api/triage', require('./routes/triageRoutes'));
 app.use('/api/emergency', require('./routes/emergencyRoutes'));
 app.use('/api/hospitals', require('./routes/hospitalRoutes'));
 app.use('/api/chat', require('./routes/chatRoutes'));
-app.use('/health-record', require('./routes/healthRecordRoutes'));
-console.log('Routes registered successfully');
+app.use('/api/reports', require('./routes/reportRoutes'));
+app.use('/health-record', require('./routes/healthRecordRoutes')); // Public health record page for QR code
 
 app.get('/', (req, res) => {
     res.send('CareGrid AI API is Running');

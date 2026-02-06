@@ -2,7 +2,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import SOSButton from './SOSButton';
 import SessionTimer from './SessionTimer';
-import { Activity, Home, FileText, MessageSquare, LogOut, Menu, X, Ambulance, ShieldCheck } from 'lucide-react';
+import { Activity, Home, FileText, MessageSquare, LogOut, Menu, X, Ambulance, ShieldCheck, FolderHeart } from 'lucide-react';
 import { useState } from 'react';
 import clsx from 'clsx';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -39,6 +39,7 @@ const Layout = ({ children }) => {
         { name: t('nav.emergency'), path: '/emergency', icon: Ambulance, className: 'text-red-500 font-bold' },
         { name: t('nav.findHospital'), path: '/map', icon: FileText },
         { name: t('nav.aiMedic'), path: '/chat', icon: MessageSquare },
+        { name: 'Health Vault', path: '/reports', icon: FolderHeart },
     ];
 
     return (

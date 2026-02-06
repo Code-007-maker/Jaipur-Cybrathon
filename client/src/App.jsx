@@ -8,6 +8,7 @@ import Triage from './pages/Triage';
 import Emergency from './pages/Emergency';
 import HospitalMap from './pages/HospitalMap';
 import Chat from './pages/Chat';
+import ReportVault from './pages/ReportVault';
 import EmergencyIdViewer from './pages/EmergencyIdViewer';
 
 // Protected Route Wrapper
@@ -44,6 +45,7 @@ function App() {
                 <Route path="/emergency" element={<ProtectedRoute><Emergency /></ProtectedRoute>} />
                 <Route path="/map" element={<ProtectedRoute><HospitalMap /></ProtectedRoute>} />
                 <Route path="/chat" element={<ProtectedRoute><Chat /></ProtectedRoute>} />
+                <Route path="/reports" element={<ProtectedRoute><ReportVault /></ProtectedRoute>} />
               </Routes>
             </Layout>
           } />
