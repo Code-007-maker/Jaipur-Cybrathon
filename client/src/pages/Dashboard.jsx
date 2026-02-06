@@ -5,6 +5,7 @@ import { QrCode, Heart, Activity, AlertCircle, Calendar, Phone, Edit3, MapPin, X
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../context/ThemeContext';
+import { QRCodeSVG } from 'qrcode.react';
 import clsx from 'clsx';
 import api from '../utils/api';
 
@@ -27,7 +28,8 @@ const Dashboard = () => {
         bloodGroup: user?.bloodGroup || '',
         allergies: user?.allergies || [],
         chronicConditions: user?.chronicConditions || [],
-        emergencyContacts: user?.emergencyContacts || []
+        emergencyContacts: user?.emergencyContacts || [],
+        pastEmergencies: user?.pastEmergencies || []
     });
 
     const [locationLoading, setLocationLoading] = useState(false);
@@ -41,7 +43,8 @@ const Dashboard = () => {
                 bloodGroup: user.bloodGroup || '',
                 allergies: user.allergies || [],
                 chronicConditions: user.chronicConditions || [],
-                emergencyContacts: user.emergencyContacts || []
+                emergencyContacts: user.emergencyContacts || [],
+                pastEmergencies: user.pastEmergencies || []
             });
         }
         fetchHistory();
@@ -89,6 +92,7 @@ const Dashboard = () => {
             if (section === 'phone') setIsEditingPhone(false);
             if (section === 'medical') setIsEditingMedical(false);
             if (section === 'emergency') setIsEditingEmergency(false);
+            if (section === 'pastEmergencies') setIsEditingPastEmergencies(false);
         } catch (error) {
             alert("Failed to update profile");
         }
@@ -125,6 +129,48 @@ const Dashboard = () => {
         });
     };
 
+    // Past Emergencies handlers
+    const handleAddPastEmergency = () => {
+        const newEmergency = {
+            id: Date.now().toString(),
+            date: new Date().toISOString().split('T')[0],
+            title: '',
+            location: '',
+            status: 'complete'
+        };
+        setFormData(prev => ({
+            ...prev,
+            pastEmergencies: [...prev.pastEmergencies, newEmergency]
+        }));
+    };
+
+    const handlePastEmergencyChange = (index, field, value) => {
+        const updated = [...formData.pastEmergencies];
+        updated[index][field] = value;
+        setFormData(prev => ({ ...prev, pastEmergencies: updated }));
+    };
+
+    const handleRemovePastEmergency = (index) => {
+        setFormData(prev => ({
+            ...prev,
+            pastEmergencies: prev.pastEmergencies.filter((_, i) => i !== index)
+        }));
+    };
+
+    // Generate QR code data
+    const generateQrData = () => {
+        const healthData = {
+            name: user?.name,
+            bloodGroup: formData.bloodGroup,
+            age: formData.age,
+            allergies: formData.allergies,
+            chronicConditions: formData.chronicConditions,
+            emergencyContacts: formData.emergencyContacts,
+            phone: formData.phone
+        };
+        return JSON.stringify(healthData);
+    };
+
     const isDarkMode = theme === 'dark';
 
     const InfoCard = ({ icon: Icon, label, value, color }) => (
@@ -144,6 +190,15 @@ const Dashboard = () => {
 
     const isFirstTime = !user?.age || !user?.bloodGroup || user?.emergencyContacts?.length === 0;
 
+    const getStatusColor = (status) => {
+        switch (status) {
+            case 'discharged': return 'bg-red-500';
+            case 'complete': return 'bg-green-500';
+            case 'ongoing': return 'bg-amber-500';
+            default: return 'bg-blue-500';
+        }
+    };
+
     return (
         <div className="space-y-6">
             <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -151,14 +206,99 @@ const Dashboard = () => {
                     <h1 className={clsx("text-3xl font-bold", isDarkMode ? "text-white" : "text-slate-900")}>{t('dashboard.title')}</h1>
                     <p className="text-slate-500">{t('dashboard.subtitle')}</p>
                 </div>
-                <button className={clsx(
-                    "flex items-center gap-2 px-5 py-2.5 rounded-xl font-medium transition-colors",
-                    isDarkMode ? "bg-white text-slate-900 hover:bg-slate-200" : "bg-slate-900 text-white hover:bg-slate-800"
-                )}>
+                <button
+                    onClick={() => setShowQrModal(true)}
+                    className={clsx(
+                        "flex items-center gap-2 px-5 py-2.5 rounded-xl font-medium transition-colors",
+                        isDarkMode ? "bg-white text-slate-900 hover:bg-slate-200" : "bg-slate-900 text-white hover:bg-slate-800"
+                    )}
+                >
                     <QrCode className="w-5 h-5" />
                     {t('dashboard.showEmergencyId')}
                 </button>
             </header>
+
+            {/* QR Code Modal */}
+            <AnimatePresence>
+                {showQrModal && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+                        onClick={() => setShowQrModal(false)}
+                    >
+                        <motion.div
+                            initial={{ scale: 0.9, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0.9, opacity: 0 }}
+                            className={clsx(
+                                "rounded-3xl p-8 max-w-md w-full shadow-2xl border",
+                                isDarkMode ? "bg-slate-800 border-slate-700" : "bg-white border-slate-100"
+                            )}
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            <div className="text-center mb-6">
+                                <div className="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
+                                    <QrCode className="w-8 h-8 text-white" />
+                                </div>
+                                <h2 className={clsx("text-2xl font-bold mb-2", isDarkMode ? "text-white" : "text-slate-900")}>
+                                    {t('dashboard.emergencyIdTitle')}
+                                </h2>
+                                <p className="text-slate-500">{t('dashboard.scanQrCode')}</p>
+                            </div>
+
+                            <div className={clsx(
+                                "p-6 rounded-2xl flex items-center justify-center mb-6",
+                                isDarkMode ? "bg-white" : "bg-slate-50"
+                            )}>
+                                <QRCodeSVG
+                                    value={generateQrData()}
+                                    size={220}
+                                    level="H"
+                                    includeMargin={true}
+                                    bgColor="#ffffff"
+                                    fgColor="#1e293b"
+                                />
+                            </div>
+
+                            <div className={clsx(
+                                "p-4 rounded-xl mb-6 text-sm",
+                                isDarkMode ? "bg-slate-700/50" : "bg-slate-100"
+                            )}>
+                                <div className="grid grid-cols-2 gap-2">
+                                    <div>
+                                        <p className="text-slate-500 text-xs">{t('dashboard.fullName')}</p>
+                                        <p className={clsx("font-semibold", isDarkMode ? "text-white" : "text-slate-800")}>{user?.name}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-slate-500 text-xs">{t('dashboard.bloodType')}</p>
+                                        <p className={clsx("font-semibold", isDarkMode ? "text-white" : "text-slate-800")}>{formData.bloodGroup || t('dashboard.none')}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-slate-500 text-xs">{t('dashboard.age')}</p>
+                                        <p className={clsx("font-semibold", isDarkMode ? "text-white" : "text-slate-800")}>{formData.age || t('dashboard.none')}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-slate-500 text-xs">{t('dashboard.allergies')}</p>
+                                        <p className={clsx("font-semibold", isDarkMode ? "text-white" : "text-slate-800")}>{formData.allergies?.length || '0'}</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <button
+                                onClick={() => setShowQrModal(false)}
+                                className={clsx(
+                                    "w-full py-3 rounded-xl font-bold transition-colors",
+                                    isDarkMode ? "bg-slate-700 text-white hover:bg-slate-600" : "bg-slate-900 text-white hover:bg-slate-800"
+                                )}
+                            >
+                                {t('dashboard.closeModal')}
+                            </button>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
             {isFirstTime && (
                 <motion.div
@@ -189,7 +329,7 @@ const Dashboard = () => {
                 <InfoCard icon={Heart} label={t('dashboard.bloodType')} value={formData.bloodGroup} color="bg-red-500" />
                 <InfoCard icon={Activity} label={t('dashboard.age')} value={formData.age} color="bg-blue-500" />
                 <InfoCard icon={AlertCircle} label={t('dashboard.allergies')} value={formData.allergies?.length || '0'} color="bg-orange-500" />
-                <InfoCard icon={Calendar} label={t('dashboard.lastVisit')} value="Oct 24, 2025" color="bg-green-500" />
+                <InfoCard icon={Calendar} label={t('dashboard.lastVisit')} value={formData.pastEmergencies?.[0]?.date || t('dashboard.none')} color="bg-green-500" />
             </div>
 
             <div className="grid lg:grid-cols-3 gap-6">
@@ -464,6 +604,7 @@ const Dashboard = () => {
                         </div>
                     </motion.div>
 
+                    {/* Editable Past Emergencies */}
                     <motion.div
                         initial={{ opacity: 0, x: 20 }}
                         animate={{ opacity: 1, x: 0 }}

@@ -9,13 +9,6 @@ import { motion } from 'framer-motion';
 import api from '../utils/api';
 import clsx from 'clsx';
 
-const steps = [
-    { id: 'searching', label: 'Searching', icon: Search },
-    { id: 'assigned', label: 'Responder Assigned', icon: Shield },
-    { id: 'en_route', label: 'En Route', icon: Ambulance },
-    { id: 'arrived', label: 'Arrived', icon: CheckCircle },
-];
-
 const Emergency = () => {
     const { user } = useAuth();
     const { t } = useTranslation();
@@ -75,20 +68,32 @@ const Emergency = () => {
     if (!activeCase || activeCase.status === 'cancelled' || activeCase.status === 'resolved') {
         return (
             <div className="flex flex-col items-center justify-center h-[60vh] text-center">
-                <Shield className="w-20 h-20 text-slate-300 mb-6" />
-                <h2 className="text-2xl font-bold text-slate-900">No Active Emergency</h2>
-                <p className="text-slate-500 max-w-md mt-2">You are safe. Use the SOS button if you need immediate assistance.</p>
+                <Shield className={clsx(
+                    "w-20 h-20 mb-6",
+                    isDarkMode ? "text-slate-600" : "text-slate-300"
+                )} />
+                <h2 className={clsx(
+                    "text-2xl font-bold",
+                    isDarkMode ? "text-white" : "text-slate-900"
+                )}>{t('emergency.noActive')}</h2>
+                <p className={clsx(
+                    "max-w-md mt-2",
+                    isDarkMode ? "text-slate-400" : "text-slate-500"
+                )}>{t('emergency.safeMessage')}</p>
             </div>
         );
     }
 
     return (
         <div className="max-w-4xl mx-auto space-y-6">
-            <div className="bg-red-600 rounded-3xl p-6 text-white shadow-xl shadow-red-200">
+            <div className={clsx(
+                "rounded-3xl p-6 text-white shadow-xl",
+                isDarkMode ? "bg-red-700 shadow-red-900/30" : "bg-red-600 shadow-red-200"
+            )}>
                 <div className="flex items-center justify-between mb-8">
                     <div>
-                        <h1 className="text-3xl font-bold">Emergency Active</h1>
-                        <p className="opacity-90 mt-1">Status: <span className="uppercase font-bold tracking-wider">{activeCase.status.replace('_', ' ')}</span></p>
+                        <h1 className="text-3xl font-bold">{t('emergency.title')}</h1>
+                        <p className="opacity-90 mt-1">{t('emergency.status')}: <span className="uppercase font-bold tracking-wider">{activeCase.status.replace('_', ' ')}</span></p>
                     </div>
                     <div className="bg-white/20 p-3 rounded-full animate-pulse">
                         <Phone className="w-8 h-8" />
@@ -130,29 +135,58 @@ const Emergency = () => {
                     <motion.div
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
-                        className="bg-white p-6 rounded-3xl border border-slate-100 shadow-lg"
+                        className={clsx(
+                            "p-6 rounded-3xl border shadow-lg transition-colors",
+                            isDarkMode ? "bg-slate-800 border-slate-700" : "bg-white border-slate-100"
+                        )}
                     >
-                        <h3 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
-                            <Ambulance className="w-5 h-5 text-blue-600" /> Responder Assigned
+                        <h3 className={clsx(
+                            "text-lg font-bold mb-4 flex items-center gap-2",
+                            isDarkMode ? "text-white" : "text-slate-900"
+                        )}>
+                            <Ambulance className="w-5 h-5 text-blue-600" /> {t('emergency.responderAssigned')}
                         </h3>
                         <div className="flex items-center gap-4 mb-6">
-                            <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center">
-                                <span className="font-bold text-2xl text-slate-600">42</span>
+                            <div className={clsx(
+                                "w-16 h-16 rounded-full flex items-center justify-center",
+                                isDarkMode ? "bg-slate-700" : "bg-slate-100"
+                            )}>
+                                <span className={clsx(
+                                    "font-bold text-2xl",
+                                    isDarkMode ? "text-slate-300" : "text-slate-600"
+                                )}>42</span>
                             </div>
                             <div>
-                                <p className="text-xl font-bold text-slate-900">{activeCase.assignedResponder.name}</p>
-                                <p className="text-slate-500">{activeCase.assignedResponder.vehicleId}</p>
+                                <p className={clsx(
+                                    "text-xl font-bold",
+                                    isDarkMode ? "text-white" : "text-slate-900"
+                                )}>{activeCase.assignedResponder.name}</p>
+                                <p className={clsx(
+                                    isDarkMode ? "text-slate-400" : "text-slate-500"
+                                )}>{activeCase.assignedResponder.vehicleId}</p>
                             </div>
                         </div>
 
                         <div className="grid grid-cols-2 gap-4 mb-4">
-                            <div className="bg-blue-50 p-3 rounded-xl">
-                                <p className="text-xs text-blue-600 font-bold uppercase mb-1">Estimated Arrival</p>
-                                <p className="text-xl font-bold text-blue-900">{activeCase.assignedResponder.eta}</p>
+                            <div className={clsx(
+                                "p-3 rounded-xl",
+                                isDarkMode ? "bg-blue-900/30" : "bg-blue-50"
+                            )}>
+                                <p className="text-xs text-blue-600 font-bold uppercase mb-1">{t('emergency.estimatedArrival')}</p>
+                                <p className={clsx(
+                                    "text-xl font-bold",
+                                    isDarkMode ? "text-blue-300" : "text-blue-900"
+                                )}>{activeCase.assignedResponder.eta}</p>
                             </div>
-                            <div className="bg-green-50 p-3 rounded-xl">
-                                <p className="text-xs text-green-600 font-bold uppercase mb-1">Contact</p>
-                                <p className="text-xl font-bold text-green-900">{activeCase.assignedResponder.phone}</p>
+                            <div className={clsx(
+                                "p-3 rounded-xl",
+                                isDarkMode ? "bg-green-900/30" : "bg-green-50"
+                            )}>
+                                <p className="text-xs text-green-600 font-bold uppercase mb-1">{t('emergency.contact')}</p>
+                                <p className={clsx(
+                                    "text-xl font-bold",
+                                    isDarkMode ? "text-green-300" : "text-green-900"
+                                )}>{activeCase.assignedResponder.phone}</p>
                             </div>
                         </div>
                     </motion.div>

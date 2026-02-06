@@ -18,8 +18,18 @@ const UserSchema = new mongoose.Schema({
             email: { type: String }
         }
     ],
+    pastEmergencies: [
+        {
+            id: { type: String },
+            date: { type: String },
+            title: { type: String },
+            location: { type: String },
+            status: { type: String, enum: ['discharged', 'complete', 'ongoing'], default: 'complete' }
+        }
+    ],
     role: { type: String, enum: ['patient', 'doctor', 'responder'], default: 'patient' },
     createdAt: { type: Date, default: Date.now }
 });
 
 module.exports = mongoose.model('User', UserSchema);
+
