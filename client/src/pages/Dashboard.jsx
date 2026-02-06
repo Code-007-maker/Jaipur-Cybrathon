@@ -135,6 +135,50 @@ const Dashboard = () => {
         });
     };
 
+    // Custom medical items state
+    const [customAllergyInput, setCustomAllergyInput] = useState('');
+    const [customConditionInput, setCustomConditionInput] = useState('');
+
+    // Add custom allergy
+    const handleAddCustomAllergy = () => {
+        const trimmed = customAllergyInput.trim();
+        if (trimmed && !formData.allergies.includes(trimmed)) {
+            setFormData(prev => ({
+                ...prev,
+                allergies: [...prev.allergies, trimmed]
+            }));
+            setCustomAllergyInput('');
+        }
+    };
+
+    // Add custom chronic condition
+    const handleAddCustomCondition = () => {
+        const trimmed = customConditionInput.trim();
+        if (trimmed && !formData.chronicConditions.includes(trimmed)) {
+            setFormData(prev => ({
+                ...prev,
+                chronicConditions: [...prev.chronicConditions, trimmed]
+            }));
+            setCustomConditionInput('');
+        }
+    };
+
+    // Remove allergy
+    const handleRemoveAllergy = (item) => {
+        setFormData(prev => ({
+            ...prev,
+            allergies: prev.allergies.filter(a => a !== item)
+        }));
+    };
+
+    // Remove chronic condition
+    const handleRemoveCondition = (item) => {
+        setFormData(prev => ({
+            ...prev,
+            chronicConditions: prev.chronicConditions.filter(c => c !== item)
+        }));
+    };
+
     // Past Emergencies handlers
     const handleAddPastEmergency = () => {
         const newEmergency = {
@@ -592,41 +636,150 @@ const Dashboard = () => {
 
                             <div>
                                 <p className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">{t('dashboard.chronicConditions')}</p>
-                                <div className="flex flex-wrap gap-2">
-                                    {['Asthma', 'Hypertension', 'Diabetes', 'Arthritis'].map((c) => (
-                                        <button
-                                            key={c}
-                                            onClick={() => isEditingMedical && handleToggleMedicalItem('chronicConditions', c)}
-                                            className={clsx(
-                                                "px-3 py-1 rounded-full text-sm font-medium border transition-colors",
-                                                formData.chronicConditions?.includes(c)
-                                                    ? "bg-amber-100 text-amber-700 border-amber-200"
-                                                    : "bg-slate-50 text-slate-400 border-slate-200 dark:bg-slate-700 dark:border-slate-600"
-                                            )}
-                                        >
-                                            {c}
-                                        </button>
-                                    ))}
-                                </div>
+
+                                {/* Display all selected chronic conditions as removable chips */}
+                                {formData.chronicConditions?.length > 0 && (
+                                    <div className="flex flex-wrap gap-2 mb-3">
+                                        {formData.chronicConditions.map((c, idx) => (
+                                            <span
+                                                key={idx}
+                                                className={clsx(
+                                                    "px-3 py-1.5 rounded-full text-sm font-medium flex items-center gap-2",
+                                                    "bg-amber-100 text-amber-700 border border-amber-200"
+                                                )}
+                                            >
+                                                {c}
+                                                {isEditingMedical && (
+                                                    <button
+                                                        onClick={() => handleRemoveCondition(c)}
+                                                        className="text-amber-600 hover:text-amber-800 transition-colors"
+                                                    >
+                                                        <X className="w-3 h-3" />
+                                                    </button>
+                                                )}
+                                            </span>
+                                        ))}
+                                    </div>
+                                )}
+
+                                {/* Predefined options - only show in edit mode */}
+                                {isEditingMedical && (
+                                    <>
+                                        <p className="text-xs text-slate-500 mb-2">Quick add common conditions:</p>
+                                        <div className="flex flex-wrap gap-2 mb-3">
+                                            {['Asthma', 'Hypertension', 'Diabetes', 'Arthritis', 'Heart Disease', 'Epilepsy', 'Thyroid'].map((c) => (
+                                                <button
+                                                    key={c}
+                                                    onClick={() => handleToggleMedicalItem('chronicConditions', c)}
+                                                    disabled={formData.chronicConditions?.includes(c)}
+                                                    className={clsx(
+                                                        "px-3 py-1 rounded-full text-sm font-medium border transition-colors",
+                                                        formData.chronicConditions?.includes(c)
+                                                            ? "bg-amber-50 text-amber-400 border-amber-100 cursor-not-allowed"
+                                                            : "bg-slate-50 text-slate-500 border-slate-200 hover:bg-amber-50 hover:border-amber-200 dark:bg-slate-700 dark:border-slate-600"
+                                                    )}
+                                                >
+                                                    + {c}
+                                                </button>
+                                            ))}
+                                        </div>
+
+                                        {/* Custom input */}
+                                        <div className="flex gap-2">
+                                            <input
+                                                type="text"
+                                                value={customConditionInput}
+                                                onChange={(e) => setCustomConditionInput(e.target.value)}
+                                                onKeyDown={(e) => e.key === 'Enter' && handleAddCustomCondition()}
+                                                placeholder="Add custom condition..."
+                                                className={clsx(
+                                                    "flex-1 px-3 py-2 text-sm rounded-lg border focus:ring-2 focus:ring-amber-400 transition-colors",
+                                                    isDarkMode ? "bg-slate-700 border-slate-600 text-white placeholder-slate-400" : "bg-slate-50 border-slate-200 text-slate-900"
+                                                )}
+                                            />
+                                            <button
+                                                onClick={handleAddCustomCondition}
+                                                className="px-4 py-2 bg-amber-600 text-white rounded-lg font-medium hover:bg-amber-700 transition-colors flex items-center gap-1"
+                                            >
+                                                <Plus className="w-4 h-4" /> Add
+                                            </button>
+                                        </div>
+                                    </>
+                                )}
                             </div>
+
                             <div>
                                 <p className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">{t('dashboard.allergies')}</p>
-                                <div className="flex flex-wrap gap-2">
-                                    {['Peanuts', 'Penicillin', 'Dust', 'Lactose'].map((c) => (
-                                        <button
-                                            key={c}
-                                            onClick={() => isEditingMedical && handleToggleMedicalItem('allergies', c)}
-                                            className={clsx(
-                                                "px-3 py-1 rounded-full text-sm font-medium border transition-colors",
-                                                formData.allergies?.includes(c)
-                                                    ? "bg-red-100 text-red-700 border-red-200"
-                                                    : "bg-slate-50 text-slate-400 border-slate-200 dark:bg-slate-700 dark:border-slate-600"
-                                            )}
-                                        >
-                                            {c}
-                                        </button>
-                                    ))}
-                                </div>
+
+                                {/* Display all selected allergies as removable chips */}
+                                {formData.allergies?.length > 0 && (
+                                    <div className="flex flex-wrap gap-2 mb-3">
+                                        {formData.allergies.map((a, idx) => (
+                                            <span
+                                                key={idx}
+                                                className={clsx(
+                                                    "px-3 py-1.5 rounded-full text-sm font-medium flex items-center gap-2",
+                                                    "bg-red-100 text-red-700 border border-red-200"
+                                                )}
+                                            >
+                                                {a}
+                                                {isEditingMedical && (
+                                                    <button
+                                                        onClick={() => handleRemoveAllergy(a)}
+                                                        className="text-red-600 hover:text-red-800 transition-colors"
+                                                    >
+                                                        <X className="w-3 h-3" />
+                                                    </button>
+                                                )}
+                                            </span>
+                                        ))}
+                                    </div>
+                                )}
+
+                                {/* Predefined options - only show in edit mode */}
+                                {isEditingMedical && (
+                                    <>
+                                        <p className="text-xs text-slate-500 mb-2">Quick add common allergies:</p>
+                                        <div className="flex flex-wrap gap-2 mb-3">
+                                            {['Peanuts', 'Penicillin', 'Dust', 'Lactose', 'Shellfish', 'Gluten', 'Eggs', 'Soy'].map((a) => (
+                                                <button
+                                                    key={a}
+                                                    onClick={() => handleToggleMedicalItem('allergies', a)}
+                                                    disabled={formData.allergies?.includes(a)}
+                                                    className={clsx(
+                                                        "px-3 py-1 rounded-full text-sm font-medium border transition-colors",
+                                                        formData.allergies?.includes(a)
+                                                            ? "bg-red-50 text-red-400 border-red-100 cursor-not-allowed"
+                                                            : "bg-slate-50 text-slate-500 border-slate-200 hover:bg-red-50 hover:border-red-200 dark:bg-slate-700 dark:border-slate-600"
+                                                    )}
+                                                >
+                                                    + {a}
+                                                </button>
+                                            ))}
+                                        </div>
+
+                                        {/* Custom input */}
+                                        <div className="flex gap-2">
+                                            <input
+                                                type="text"
+                                                value={customAllergyInput}
+                                                onChange={(e) => setCustomAllergyInput(e.target.value)}
+                                                onKeyDown={(e) => e.key === 'Enter' && handleAddCustomAllergy()}
+                                                placeholder="Add custom allergy..."
+                                                className={clsx(
+                                                    "flex-1 px-3 py-2 text-sm rounded-lg border focus:ring-2 focus:ring-red-400 transition-colors",
+                                                    isDarkMode ? "bg-slate-700 border-slate-600 text-white placeholder-slate-400" : "bg-slate-50 border-slate-200 text-slate-900"
+                                                )}
+                                            />
+                                            <button
+                                                onClick={handleAddCustomAllergy}
+                                                className="px-4 py-2 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 transition-colors flex items-center gap-1"
+                                            >
+                                                <Plus className="w-4 h-4" /> Add
+                                            </button>
+                                        </div>
+                                    </>
+                                )}
                             </div>
                         </div>
                     </motion.div>
