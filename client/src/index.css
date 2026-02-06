@@ -1,0 +1,37 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary-50: #f0f9ff;
+  --color-primary-100: #e0f2fe;
+  --color-primary-500: #0ea5e9;
+  --color-primary-600: #0284c7;
+  --color-primary-700: #0369a1;
+
+  --color-emergency-500: #ef4444;
+  --color-emergency-600: #dc2626;
+
+  --color-success: #22c55e;
+  --color-warning: #f59e0b;
+
+  --animate-pulse-fast: pulse 1s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@layer base {
+  body {
+    @apply bg-slate-50 text-slate-900;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 transition-colors font-medium;
+  }
+
+  .btn-danger {
+    @apply bg-emergency-600 text-white px-6 py-3 rounded-full hover:bg-emergency-500 transition-all font-bold shadow-lg shadow-red-200 transform active:scale-95;
+  }
+
+  .card {
+    @apply bg-white/80 backdrop-blur-md border border-white/50 rounded-xl shadow-sm p-4;
+  }
+}
