@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next';
 import { useTheme } from '../context/ThemeContext';
 import clsx from 'clsx';
 import api from '../utils/api';
+import { QRCodeSVG } from 'qrcode.react';
 
 const Dashboard = () => {
     const { user, updateProfile } = useAuth();
@@ -18,6 +19,7 @@ const Dashboard = () => {
     const [isEditingEmergency, setIsEditingEmergency] = useState(false);
     const [emergencyHistory, setEmergencyHistory] = useState([]);
     const [loadingHistory, setLoadingHistory] = useState(true);
+    const [showQRModal, setShowQRModal] = useState(false);
     const location = useLocation();
 
     const [formData, setFormData] = useState({
@@ -151,14 +153,81 @@ const Dashboard = () => {
                     <h1 className={clsx("text-3xl font-bold", isDarkMode ? "text-white" : "text-slate-900")}>{t('dashboard.title')}</h1>
                     <p className="text-slate-500">{t('dashboard.subtitle')}</p>
                 </div>
-                <button className={clsx(
-                    "flex items-center gap-2 px-5 py-2.5 rounded-xl font-medium transition-colors",
-                    isDarkMode ? "bg-white text-slate-900 hover:bg-slate-200" : "bg-slate-900 text-white hover:bg-slate-800"
-                )}>
+                <button
+                    onClick={() => setShowQRModal(true)}
+                    className={clsx(
+                        "flex items-center gap-2 px-5 py-2.5 rounded-xl font-medium transition-colors",
+                        isDarkMode ? "bg-white text-slate-900 hover:bg-slate-200" : "bg-slate-900 text-white hover:bg-slate-800"
+                    )}>
                     <QrCode className="w-5 h-5" />
                     {t('dashboard.showEmergencyId')}
                 </button>
             </header>
+
+            {/* QR Code Modal */}
+            <AnimatePresence>
+                {showQRModal && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+                        onClick={() => setShowQRModal(false)}
+                    >
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.9, y: 20 }}
+                            onClick={(e) => e.stopPropagation()}
+                            className={clsx(
+                                "w-full max-w-sm rounded-3xl shadow-2xl p-6 text-center",
+                                isDarkMode ? "bg-slate-800" : "bg-white"
+                            )}
+                        >
+                            <div className="flex justify-between items-center mb-4">
+                                <h2 className={clsx("text-xl font-bold", isDarkMode ? "text-white" : "text-slate-900")}>
+                                    {t('dashboard.emergencyId') || 'Emergency Health ID'}
+                                </h2>
+                                <button
+                                    onClick={() => setShowQRModal(false)}
+                                    className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+                                >
+                                    <X className="w-5 h-5" />
+                                </button>
+                            </div>
+
+                            <div className="bg-white p-4 rounded-2xl mx-auto inline-block mb-4 shadow-inner">
+                                <QRCodeSVG
+                                    value={`http://192.168.91.1:5000/health-record/${user?.id || user?._id}`}
+                                    size={200}
+                                    level="H"
+                                    includeMargin={true}
+                                    bgColor="#ffffff"
+                                    fgColor="#1e293b"
+                                />
+                            </div>
+
+                            <p className={clsx("text-sm mb-2 font-medium", isDarkMode ? "text-white" : "text-slate-900")}>
+                                {user?.name}
+                            </p>
+                            <p className="text-xs text-slate-500 mb-4">
+                                {t('dashboard.scanQRMessage') || 'Scan this QR code to view emergency health information'}
+                            </p>
+
+                            <div className="flex gap-2 pt-2">
+                                <div className="flex-1 bg-red-50 rounded-xl p-3">
+                                    <p className="text-xs text-red-600 font-medium">{t('dashboard.bloodType') || 'Blood Type'}</p>
+                                    <p className="text-lg font-bold text-red-700">{formData.bloodGroup || 'N/A'}</p>
+                                </div>
+                                <div className="flex-1 bg-orange-50 rounded-xl p-3">
+                                    <p className="text-xs text-orange-600 font-medium">{t('dashboard.allergies') || 'Allergies'}</p>
+                                    <p className="text-lg font-bold text-orange-700">{formData.allergies?.length || 0}</p>
+                                </div>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
             {isFirstTime && (
                 <motion.div

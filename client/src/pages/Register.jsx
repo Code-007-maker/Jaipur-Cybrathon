@@ -3,12 +3,14 @@ import { useAuth } from '../context/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
 import { Activity } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { useTranslation } from 'react-i18next';
 
 const Register = () => {
     const [formData, setFormData] = useState({ name: '', email: '', password: '' });
     const [error, setError] = useState('');
     const { register } = useAuth();
     const navigate = useNavigate();
+    const { t } = useTranslation();
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -16,7 +18,7 @@ const Register = () => {
             await register(formData);
             navigate('/');
         } catch (err) {
-            setError(err.msg || 'Registration failed');
+            setError(err.msg || t('register.registerFailed'));
         }
     };
 
@@ -35,8 +37,8 @@ const Register = () => {
                     <div className="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-xl shadow-blue-200">
                         <Activity className="text-white w-10 h-10" />
                     </div>
-                    <h1 className="text-3xl font-bold text-slate-900 mb-2">Create ID</h1>
-                    <p className="text-slate-500">Your secure health identity</p>
+                    <h1 className="text-3xl font-bold text-slate-900 mb-2">{t('register.title')}</h1>
+                    <p className="text-slate-500">{t('register.subtitle')}</p>
                 </div>
 
                 {error && (
@@ -47,10 +49,10 @@ const Register = () => {
 
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1">Full Name</label>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">{t('register.fullName')}</label>
                         <input
                             type="text"
-                            placeholder="John Doe"
+                            placeholder={t('register.namePlaceholder')}
                             className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all block"
                             value={formData.name}
                             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
@@ -58,10 +60,10 @@ const Register = () => {
                         />
                     </div>
                     <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1">Email Address</label>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">{t('register.email')}</label>
                         <input
                             type="email"
-                            placeholder="you@caregrid.ai"
+                            placeholder={t('register.emailPlaceholder')}
                             className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all block"
                             value={formData.email}
                             onChange={(e) => setFormData({ ...formData, email: e.target.value })}
@@ -69,7 +71,7 @@ const Register = () => {
                         />
                     </div>
                     <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1">Password</label>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">{t('register.password')}</label>
                         <input
                             type="password"
                             placeholder="••••••••"
@@ -84,11 +86,11 @@ const Register = () => {
                         type="submit"
                         className="w-full bg-blue-600 text-white font-bold py-3.5 rounded-xl hover:bg-blue-700 transition-all shadow-lg shadow-blue-200 mt-2"
                     >
-                        Get Started
+                        {t('register.getStarted')}
                     </button>
                 </form>
                 <div className="mt-8 text-center">
-                    <p className="text-slate-500">Already have an ID? <Link to="/login" className="text-blue-600 font-semibold hover:underline">Sign In</Link></p>
+                    <p className="text-slate-500">{t('register.hasAccount')} <Link to="/login" className="text-blue-600 font-semibold hover:underline">{t('register.signIn')}</Link></p>
                 </div>
             </motion.div>
         </div>

@@ -17,9 +17,13 @@ const Layout = ({ children }) => {
     const { theme, toggleTheme } = useTheme();
     const { i18n, t } = useTranslation();
 
+    const languages = ['en', 'hi', 'mr', 'ta', 'te'];
+    const languageNames = { en: 'EN', hi: 'हिं', mr: 'मर', ta: 'த', te: 'తె' };
+
     const toggleLanguage = () => {
-        const newLang = i18n.language === 'en' ? 'hi' : 'en';
-        i18n.changeLanguage(newLang);
+        const currentIndex = languages.indexOf(i18n.language);
+        const nextIndex = (currentIndex + 1) % languages.length;
+        i18n.changeLanguage(languages[nextIndex]);
     };
 
     // If not authenticated, just render children (like login page)
@@ -29,11 +33,11 @@ const Layout = ({ children }) => {
     }
 
     const navItems = [
-        { name: 'Dashboard', path: '/', icon: Home },
-        { name: 'Triage', path: '/triage', icon: Activity },
-        { name: 'Emergency', path: '/emergency', icon: Ambulance, className: 'text-red-500 font-bold' },
-        { name: 'Find Hospital', path: '/map', icon: FileText }, // Placeholder icon choice
-        { name: 'AI Medic', path: '/chat', icon: MessageSquare },
+        { name: t('nav.dashboard'), path: '/', icon: Home },
+        { name: t('nav.triage'), path: '/triage', icon: Activity },
+        { name: t('nav.emergency'), path: '/emergency', icon: Ambulance, className: 'text-red-500 font-bold' },
+        { name: t('nav.findHospital'), path: '/map', icon: FileText }, // Placeholder icon choice
+        { name: t('nav.aiMedic'), path: '/chat', icon: MessageSquare },
     ];
 
     return (
@@ -83,7 +87,7 @@ const Layout = ({ children }) => {
                         </button>
                         <button onClick={toggleLanguage} className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 flex-1 flex items-center justify-center gap-2 font-medium">
                             <Languages className="w-5 h-5" />
-                            <span className="text-xs">{i18n.language.toUpperCase()}</span>
+                            <span className="text-xs">{languageNames[i18n.language] || i18n.language.toUpperCase()}</span>
                         </button>
                     </div>
 
@@ -124,7 +128,7 @@ const Layout = ({ children }) => {
                             )}
                         >
                             <LogOut className="w-5 h-5" />
-                            Sign Out
+                            {t('nav.signOut')}
                         </button>
                     </div>
                 </aside>
@@ -148,7 +152,7 @@ const Layout = ({ children }) => {
                                     </button>
                                     <button onClick={toggleLanguage} className="p-2 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center gap-2">
                                         <Languages className="w-5 h-5 text-slate-600 dark:text-slate-300" />
-                                        <span className="text-xs font-bold dark:text-white">{i18n.language.toUpperCase()}</span>
+                                        <span className="text-xs font-bold dark:text-white">{languageNames[i18n.language] || i18n.language.toUpperCase()}</span>
                                     </button>
                                 </div>
                             </div>
@@ -179,7 +183,7 @@ const Layout = ({ children }) => {
                                 )}
                             >
                                 <LogOut className="w-6 h-6" />
-                                Sign Out
+                                {t('nav.signOut')}
                             </button>
                         </nav>
                     </motion.div>

@@ -2,10 +2,12 @@ import { useState, useRef, useEffect } from 'react';
 import { Send, User, Bot, Loader2 } from 'lucide-react';
 import api from '../utils/api';
 import clsx from 'clsx';
+import { useTranslation } from 'react-i18next';
 
 const Chat = () => {
+    const { t } = useTranslation();
     const [messages, setMessages] = useState([
-        { role: 'assistant', content: 'Hello, I am CareGrid AI. How can I assist you with your health today?' }
+        { role: 'assistant', content: t('chat.greeting') }
     ]);
     const [input, setInput] = useState('');
     const [loading, setLoading] = useState(false);
@@ -36,7 +38,7 @@ const Chat = () => {
             setMessages(prev => [...prev, botMessage]);
         } catch (err) {
             console.error(err);
-            setMessages(prev => [...prev, { role: 'assistant', content: "I'm sorry, I'm having trouble connecting right now." }]);
+            setMessages(prev => [...prev, { role: 'assistant', content: t('chat.errorMessage') }]);
         } finally {
             setLoading(false);
         }
@@ -49,8 +51,8 @@ const Chat = () => {
                     <Bot className="w-6 h-6" />
                 </div>
                 <div>
-                    <h1 className="font-bold text-lg">AI Medical Assistant</h1>
-                    <p className="text-blue-100 text-xs text-opacity-80">Always verify with a doctor</p>
+                    <h1 className="font-bold text-lg">{t('chat.title')}</h1>
+                    <p className="text-blue-100 text-xs text-opacity-80">{t('chat.subtitle')}</p>
                 </div>
             </div>
 
@@ -86,7 +88,7 @@ const Chat = () => {
                         </div>
                         <div className="p-4 bg-white border border-slate-200 rounded-2xl rounded-tl-none shadow-sm flex items-center gap-2">
                             <Loader2 className="w-4 h-4 animate-spin text-blue-600" />
-                            <span className="text-xs text-slate-500 font-medium">Thinking...</span>
+                            <span className="text-xs text-slate-500 font-medium">{t('chat.thinking')}</span>
                         </div>
                     </div>
                 )}
@@ -97,7 +99,7 @@ const Chat = () => {
                     <input
                         type="text"
                         className="flex-1 px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
-                        placeholder="Type your health concern..."
+                        placeholder={t('chat.placeholder')}
                         value={input}
                         onChange={(e) => setInput(e.target.value)}
                         disabled={loading}

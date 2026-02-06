@@ -3,8 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Phone, X, Loader2 } from 'lucide-react';
 import api from '../utils/api';
+import { useTranslation } from 'react-i18next';
 
 const SOSButton = () => {
+    const { t } = useTranslation();
     const [isActive, setIsActive] = useState(false);
     const [count, setCount] = useState(5);
     const [isSending, setIsSending] = useState(false);
@@ -98,7 +100,7 @@ const SOSButton = () => {
                         className="fixed inset-0 bg-red-600/90 backdrop-blur-sm z-50 flex flex-col items-center justify-center text-white p-6 text-center"
                     >
                         <h1 className="text-4xl font-black mb-4 animate-pulse">
-                            {isSending ? "INITIATING SOS..." : "EMERGENCY SOS"}
+                            {isSending ? t('sos.activating') : t('sos.confirmTitle')}
                         </h1>
 
                         {!isSending ? (
@@ -111,8 +113,8 @@ const SOSButton = () => {
 
                         <p className="text-xl mb-12 font-medium max-w-md">
                             {isSending
-                                ? "Pinpointing your location and alerting emergency responders. Please hold on..."
-                                : "A critical alert will be sent to your emergency contacts and nearby medical responders."}
+                                ? t('sos.active')
+                                : t('sos.confirmMessage')}
                         </p>
 
                         {!isSending && (
@@ -120,7 +122,7 @@ const SOSButton = () => {
                                 onClick={handleCancel}
                                 className="bg-white text-red-600 px-8 py-4 rounded-full font-bold text-xl flex items-center gap-2 hover:scale-105 transition-transform"
                             >
-                                <X className="w-6 h-6" /> CANCEL ALERT
+                                <X className="w-6 h-6" /> {t('sos.cancel')}
                             </button>
                         )}
                     </motion.div>

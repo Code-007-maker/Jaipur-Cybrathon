@@ -3,12 +3,14 @@ import { useAuth } from '../context/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
 import { Activity } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { useTranslation } from 'react-i18next';
 
 const Login = () => {
     const [formData, setFormData] = useState({ email: '', password: '' });
     const [error, setError] = useState('');
     const { login } = useAuth();
     const navigate = useNavigate();
+    const { t } = useTranslation();
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -16,7 +18,7 @@ const Login = () => {
             await login(formData);
             navigate('/');
         } catch (err) {
-            setError(err.msg || 'Login failed');
+            setError(err.msg || t('login.loginFailed'));
         }
     };
 
@@ -35,8 +37,8 @@ const Login = () => {
                     <div className="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-xl shadow-blue-200">
                         <Activity className="text-white w-10 h-10" />
                     </div>
-                    <h1 className="text-3xl font-bold text-slate-900 mb-2">Welcome Back</h1>
-                    <p className="text-slate-500">Access your health grid</p>
+                    <h1 className="text-3xl font-bold text-slate-900 mb-2">{t('login.title')}</h1>
+                    <p className="text-slate-500">{t('login.subtitle')}</p>
                 </div>
 
                 {error && (
@@ -47,10 +49,10 @@ const Login = () => {
 
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1">Email Address</label>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">{t('login.email')}</label>
                         <input
                             type="email"
-                            placeholder="you@caregrid.ai"
+                            placeholder={t('login.emailPlaceholder')}
                             className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
                             value={formData.email}
                             onChange={(e) => setFormData({ ...formData, email: e.target.value })}
@@ -58,7 +60,7 @@ const Login = () => {
                         />
                     </div>
                     <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1">Password</label>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">{t('login.password')}</label>
                         <input
                             type="password"
                             placeholder="••••••••"
@@ -73,12 +75,12 @@ const Login = () => {
                         type="submit"
                         className="w-full bg-blue-600 text-white font-bold py-3.5 rounded-xl hover:bg-blue-700 transition-all shadow-lg shadow-blue-200 mt-2"
                     >
-                        Sign In
+                        {t('login.signIn')}
                     </button>
                 </form>
 
                 <div className="mt-8 text-center">
-                    <p className="text-slate-500">Don't have an account? <Link to="/register" className="text-blue-600 font-semibold hover:underline">Create ID</Link></p>
+                    <p className="text-slate-500">{t('login.noAccount')} <Link to="/register" className="text-blue-600 font-semibold hover:underline">{t('login.createId')}</Link></p>
                 </div>
             </motion.div>
         </div>
