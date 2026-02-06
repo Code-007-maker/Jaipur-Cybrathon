@@ -19,6 +19,7 @@ const Dashboard = () => {
     const [isEditingEmergency, setIsEditingEmergency] = useState(false);
     const [emergencyHistory, setEmergencyHistory] = useState([]);
     const [loadingHistory, setLoadingHistory] = useState(true);
+    const [showQrModal, setShowQrModal] = useState(false);
     const location = useLocation();
 
     const [formData, setFormData] = useState({

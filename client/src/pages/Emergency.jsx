@@ -17,6 +17,14 @@ const Emergency = () => {
     const [loading, setLoading] = useState(true);
     const [isResolving, setIsResolving] = useState(false);
     const navigate = useNavigate();
+    const isDarkMode = theme === 'dark';
+
+    const steps = [
+        { id: 'pending', label: 'Received', icon: Bell },
+        { id: 'searching', label: 'Searching', icon: Search },
+        { id: 'dispatched', label: 'Dispatched', icon: Ambulance },
+        { id: 'arrived', label: 'Arrived', icon: CheckCircle },
+    ];
 
     useEffect(() => {
         const fetchActive = async () => {
