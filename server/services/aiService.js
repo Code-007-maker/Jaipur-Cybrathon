@@ -449,6 +449,7 @@ exports.analyzeSymptoms = async (symptoms, vitals, history) => {
       3. recommendedAction: string
       4. confidence: number (0-100)
       5. color: "green", "yellow", "orange", or "red"
+      6. recommendedSpecialty: string (e.g., "Cardiology", "Neurology", "Pediatrics", "Trauma", "General", "Urgent Care")
       
       Keep it concise and safe.
     `;
@@ -473,6 +474,7 @@ function intelligentAnalysis(symptoms, vitals) {
     let causes = [];
     let action = "Rest and hydration. Monitor symptoms.";
     let confidence = 75;
+    let recommendedSpecialty = "General";
 
     // Check vitals for concerning values
     let vitalsAlert = false;
@@ -494,6 +496,7 @@ function intelligentAnalysis(symptoms, vitals) {
         color = "red";
         causes = ["Possible cardiac event", "Respiratory distress", "Pulmonary embolism", "Panic attack"];
         action = "🚨 ACTIVATE SOS IMMEDIATELY. Call emergency services. Do not delay.";
+        recommendedSpecialty = "Trauma";
         confidence = 90;
     }
     // High severity
@@ -502,6 +505,7 @@ function intelligentAnalysis(symptoms, vitals) {
         color = "orange";
         causes = ["Trauma", "Severe infection", "Acute condition requiring immediate attention"];
         action = "Visit urgent care or emergency room immediately. Do not drive yourself.";
+        recommendedSpecialty = "Urgent Care";
         confidence = 85;
     }
     // Medium severity
@@ -510,6 +514,7 @@ function intelligentAnalysis(symptoms, vitals) {
         color = "yellow";
         causes = ["Viral infection", "Bacterial infection", "Gastroenteritis", "Inflammatory condition"];
         action = "Consult a doctor within 24 hours. Stay hydrated. Rest.";
+        recommendedSpecialty = "General";
         confidence = 80;
     }
     // Low severity - match specific conditions
@@ -518,6 +523,7 @@ function intelligentAnalysis(symptoms, vitals) {
         if (matchedCondition) {
             causes = [formatConditionName(matchedCondition.name), ...matchedCondition.symptoms.slice(0, 2)];
             action = matchedCondition.treatment;
+            recommendedSpecialty = getSpecialtyByCondition(matchedCondition.name);
             if (matchedCondition.severity === 'medium') {
                 severity = "Medium";
                 color = "yellow";
@@ -533,6 +539,24 @@ function intelligentAnalysis(symptoms, vitals) {
         possibleCauses: causes,
         recommendedAction: action,
         confidence,
-        color
+        color,
+        recommendedSpecialty
     };
+}
+
+function getSpecialtyByCondition(condition) {
+    const mapping = {
+        chestPain: "Cardiology",
+        heart: "Cardiology",
+        stroke: "Neurology",
+        vertigo: "Neurology",
+        headache: "Neurology",
+        diabetes: "Endocrinology",
+        hypertension: "Cardiology",
+        asthma: "Pulmonology",
+        skinRash: "Dermatology",
+        uti: "Urology",
+        gastritis: "Gastroenterology"
+    };
+    return mapping[condition] || "General";
 }
