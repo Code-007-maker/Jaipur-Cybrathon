@@ -68,6 +68,21 @@ exports.healthCheck = async (req, res) => {
     });
 };
 
+// @desc    Check environment and DB status
+// @route   GET /api/auth/health
+exports.healthCheck = async (req, res) => {
+    const mongoose = require('mongoose');
+    res.json({
+        status: 'ok',
+        database: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
+        env: {
+            JWT_SECRET: !!process.env.JWT_SECRET,
+            MONGO_URI: !!process.env.MONGO_URI,
+            NODE_ENV: process.env.NODE_ENV
+        }
+    });
+};
+
 // @desc    Login user
 // @route   POST /api/auth/login
 exports.login = async (req, res) => {
@@ -106,18 +121,21 @@ exports.login = async (req, res) => {
 exports.getUser = async (req, res) => {
     try {
         const user = await User.findById(req.user.id).select('-password');
+        if (!user) {
+            return res.status(404).json({ msg: 'User not found' });
+        }
         res.json(user);
     } catch (err) {
-        console.error(err.message);
-        res.status(500).send('Server Error');
+        console.error('GetUser Error:', err.message);
+        res.status(500).json({ msg: 'Server error fetching user data' });
     }
 };
 
 // @desc    Update user profile & medical data
 // @route   PUT /api/auth/profile
 exports.updateProfile = async (req, res) => {
-    const { age, bloodGroup, phone, address, allergies, chronicConditions, emergencyContacts } = req.body;
-    const profileFields = { age, bloodGroup, phone, address, allergies, chronicConditions, emergencyContacts };
+    const { age, bloodGroup, phone, address, allergies, chronicConditions, emergencyContacts, pastEmergencies } = req.body;
+    const profileFields = { age, bloodGroup, phone, address, allergies, chronicConditions, emergencyContacts, pastEmergencies };
 
     try {
         let user = await User.findByIdAndUpdate(
@@ -125,9 +143,13 @@ exports.updateProfile = async (req, res) => {
             { $set: profileFields },
             { new: true, runValidators: true }
         ).select('-password');
+
+        if (!user) {
+            return res.status(404).json({ msg: 'User not found' });
+        }
         res.json(user);
     } catch (err) {
-        console.error(err.message);
-        res.status(500).send('Server Error');
+        console.error('UpdateProfile Error:', err.message);
+        res.status(500).json({ msg: 'Server error updating profile' });
     }
 };
