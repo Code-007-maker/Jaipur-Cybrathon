@@ -9,7 +9,7 @@ const app = express();
 const httpServer = createServer(app);
 const io = new Server(httpServer, {
     cors: {
-        origin: '*', // Allow all for MVP, restrict in production
+        origin: '*',
         methods: ['GET', 'POST', 'PUT', 'DELETE']
     }
 });
@@ -18,10 +18,42 @@ const io = new Server(httpServer, {
 app.use(cors());
 app.use(express.json());
 
-// Database Connection
-mongoose.connect(process.env.MONGO_URI)
-    .then(() => console.log('✅ MongoDB Connected'))
-    .catch(err => console.error('❌ MongoDB Connection Error:', err));
+// MongoDB Connection with retry logic and options
+const connectDB = async () => {
+    const options = {
+        serverSelectionTimeoutMS: 30000, // 30 seconds
+        socketTimeoutMS: 45000,
+        maxPoolSize: 10,
+        retryWrites: true,
+        w: 'majority'
+    };
+
+    try {
+        await mongoose.connect(process.env.MONGO_URI, options);
+        console.log('✅ MongoDB Connected Successfully');
+    } catch (err) {
+        console.error('❌ MongoDB Connection Error:', err.message);
+        console.log('⏳ Retrying connection in 5 seconds...');
+        setTimeout(connectDB, 5000);
+    }
+};
+
+// Handle connection events
+mongoose.connection.on('connected', () => {
+    console.log('📊 Mongoose connected to MongoDB');
+});
+
+mongoose.connection.on('error', (err) => {
+    console.error('📛 Mongoose connection error:', err.message);
+});
+
+mongoose.connection.on('disconnected', () => {
+    console.log('⚠️ Mongoose disconnected. Attempting to reconnect...');
+    setTimeout(connectDB, 5000);
+});
+
+// Connect to database
+connectDB();
 
 // Routes
 app.use('/api/auth', require('./routes/authRoutes'));
@@ -34,11 +66,20 @@ app.get('/', (req, res) => {
     res.send('CareGrid AI API is Running');
 });
 
+// Health check endpoint
+app.get('/api/health', (req, res) => {
+    const dbStatus = mongoose.connection.readyState === 1 ? 'connected' : 'disconnected';
+    res.json({
+        status: 'ok',
+        database: dbStatus,
+        timestamp: new Date().toISOString()
+    });
+});
+
 // Socket.io Connection
 io.on('connection', (socket) => {
     console.log('User connected:', socket.id);
 
-    // Emergency Room Join
     socket.on('join_emergency', (caseId) => {
         socket.join(caseId);
     });
