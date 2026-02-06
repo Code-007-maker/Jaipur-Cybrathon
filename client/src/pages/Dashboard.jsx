@@ -54,7 +54,12 @@ const Dashboard = () => {
     const fetchHistory = async () => {
         try {
             const res = await api.get('/emergency/history');
-            setEmergencyHistory(res.data);
+            if (Array.isArray(res.data)) {
+                setEmergencyHistory(res.data);
+            } else {
+                console.error("Emergency history data is not an array:", res.data);
+                setEmergencyHistory([]);
+            }
         } catch (err) {
             console.error("Error fetching history:", err);
         } finally {

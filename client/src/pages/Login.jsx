@@ -86,7 +86,12 @@ const Login = () => {
                         <input
                             type="email"
                             placeholder={t('login.emailPlaceholder')}
-                            className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
+                            className={clsx(
+                                "w-full px-4 py-3 rounded-xl border focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all",
+                                isDarkMode
+                                    ? "bg-slate-700 border-slate-600 text-white placeholder-slate-400 focus:bg-slate-600"
+                                    : "bg-slate-50 border-slate-200 text-slate-900 placeholder-slate-400 focus:bg-white"
+                            )}
                             value={formData.email}
                             onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                             disabled={loading}
@@ -98,7 +103,12 @@ const Login = () => {
                         <input
                             type="password"
                             placeholder="••••••••"
-                            className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
+                            className={clsx(
+                                "w-full px-4 py-3 rounded-xl border focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all",
+                                isDarkMode
+                                    ? "bg-slate-700 border-slate-600 text-white placeholder-slate-400 focus:bg-slate-600"
+                                    : "bg-slate-50 border-slate-200 text-slate-900 placeholder-slate-400 focus:bg-white"
+                            )}
                             value={formData.password}
                             onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                             disabled={loading}

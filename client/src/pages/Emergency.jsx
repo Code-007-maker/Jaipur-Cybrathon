@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../context/ThemeContext';
-import { MapPin, Phone, Shield, Search, CheckCircle, Ambulance, Bell, Check } from 'lucide-react';
+import { MapPin, Phone, Shield, Search, CheckCircle, Ambulance } from 'lucide-react';
 import { motion } from 'framer-motion';
 import api from '../utils/api';
 import clsx from 'clsx';
@@ -26,6 +26,14 @@ const Emergency = () => {
     const [loading, setLoading] = useState(true);
     const [isResolving, setIsResolving] = useState(false);
     const navigate = useNavigate();
+    const isDarkMode = theme === 'dark';
+
+    const steps = [
+        { id: 'pending', label: 'Received', icon: Bell },
+        { id: 'searching', label: 'Searching', icon: Search },
+        { id: 'dispatched', label: 'Dispatched', icon: Ambulance },
+        { id: 'arrived', label: 'Arrived', icon: CheckCircle },
+    ];
 
     useEffect(() => {
         const fetchActive = async () => {
@@ -42,7 +50,7 @@ const Emergency = () => {
         fetchActive();
 
         // Socket Connection
-        const newSocket = io('http://localhost:5000');
+        const newSocket = io(import.meta.env.VITE_SOCKET_URL || window.location.origin);
 
         if (user?.id) {
             newSocket.on(`emergency_update_${user.id}`, (updatedCase) => {
@@ -57,18 +65,6 @@ const Emergency = () => {
     const getCurrentStepIndex = () => {
         if (!activeCase) return -1;
         return steps.findIndex(s => s.id === activeCase.status);
-    };
-
-    const handleResolve = async () => {
-        setIsResolving(true);
-        try {
-            await api.put(`/emergency/${activeCase._id}/resolve`);
-            navigate('/');
-        } catch (err) {
-            console.error("Error resolving emergency:", err);
-        } finally {
-            setIsResolving(false);
-        }
     };
 
     if (loading) return (
