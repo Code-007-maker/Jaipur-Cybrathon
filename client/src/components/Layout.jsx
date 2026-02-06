@@ -17,8 +17,8 @@ const Layout = ({ children }) => {
     const { theme, toggleTheme } = useTheme();
     const { i18n, t } = useTranslation();
 
-    const languages = ['en', 'hi', 'mr', 'ta', 'te'];
-    const languageNames = { en: 'EN', hi: 'हिं', mr: 'मर', ta: 'த', te: 'తె' };
+    const languages = ['en', 'hi', 'mr', 'bn', 'ta', 'te'];
+    const languageNames = { en: 'EN', hi: 'हिं', mr: 'मर', bn: 'বা', ta: 'த', te: 'తె' };
 
     const toggleLanguage = () => {
         const currentIndex = languages.indexOf(i18n.language);

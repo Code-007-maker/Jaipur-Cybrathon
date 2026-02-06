@@ -4,10 +4,12 @@ import { Activity, Check, AlertTriangle, Thermometer, Wind, Heart, ChevronRight,
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../context/ThemeContext';
 import api from '../utils/api';
-import { useTranslation } from 'react-i18next';
+import clsx from 'clsx';
 
 const Triage = () => {
     const { t } = useTranslation();
+    const { theme } = useTheme();
+    const isDarkMode = theme === 'dark';
     const [step, setStep] = useState(1);
     const [loading, setLoading] = useState(false);
     const [symptoms, setSymptoms] = useState('');
@@ -85,7 +87,6 @@ const Triage = () => {
                             <AlertTriangle className="w-10 h-10" />
                             <div>
                                 <p className="font-bold opacity-80">{t('triage.riskLevel')}</p>
-                                <p className="font-bold opacity-80">{t('triage.riskLevel')}</p>
                                 <h2 className="text-4xl font-bold uppercase tracking-wide">{result.severity}</h2>
                             </div>
                         </div>
@@ -144,7 +145,6 @@ const Triage = () => {
                                                 }`}
                                         >
                                             {sym.label}
-                                            {sym.label}
                                         </button>
                                     ))}
                                 </div>
@@ -165,7 +165,6 @@ const Triage = () => {
                                 disabled={!symptoms && selectedCommon.length === 0}
                                 className="w-full py-4 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
                             >
-                                {t('triage.nextStep')} <ChevronRight className="w-5 h-5" />
                                 {t('triage.nextStep')} <ChevronRight className="w-5 h-5" />
                             </button>
                         </motion.div>
@@ -242,7 +241,6 @@ const Triage = () => {
                                         isDarkMode ? "shadow-blue-900/30" : "shadow-blue-200"
                                     )}
                                 >
-                                    {t('triage.analyzeSymptoms')}
                                     {t('triage.analyzeSymptoms')}
                                 </button>
                             </div>

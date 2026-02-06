@@ -8,7 +8,6 @@ import { useTheme } from '../context/ThemeContext';
 import { QRCodeSVG } from 'qrcode.react';
 import clsx from 'clsx';
 import api from '../utils/api';
-import { QRCodeSVG } from 'qrcode.react';
 
 const Dashboard = () => {
     const { user, updateProfile } = useAuth();
@@ -20,6 +19,8 @@ const Dashboard = () => {
     const [isEditingEmergency, setIsEditingEmergency] = useState(false);
     const [isEditingPastEmergencies, setIsEditingPastEmergencies] = useState(false);
     const [showQrModal, setShowQrModal] = useState(false);
+    const [emergencyHistory, setEmergencyHistory] = useState([]);
+    const [loadingHistory, setLoadingHistory] = useState(true);
 
     const [formData, setFormData] = useState({
         phone: user?.phone || '',
@@ -157,18 +158,58 @@ const Dashboard = () => {
         }));
     };
 
-    // Generate QR code data
+    // Generate QR code data as formatted readable text
     const generateQrData = () => {
-        const healthData = {
-            name: user?.name,
-            bloodGroup: formData.bloodGroup,
-            age: formData.age,
-            allergies: formData.allergies,
-            chronicConditions: formData.chronicConditions,
-            emergencyContacts: formData.emergencyContacts,
-            phone: formData.phone
-        };
-        return JSON.stringify(healthData);
+        const lines = [
+            '═══════════════════════════',
+            '    🏥 EMERGENCY HEALTH ID',
+            '       CareGrid AI',
+            '═══════════════════════════',
+            '',
+            `👤 NAME: ${user?.name || 'N/A'}`,
+            `📞 PHONE: ${formData.phone || 'N/A'}`,
+            `🩸 BLOOD TYPE: ${formData.bloodGroup || 'N/A'}`,
+            `🎂 AGE: ${formData.age || 'N/A'}`,
+            '',
+            '─── ⚠️ ALLERGIES ───',
+        ];
+
+        if (formData.allergies?.length > 0) {
+            formData.allergies.forEach(allergy => {
+                lines.push(`  • ${allergy}`);
+            });
+        } else {
+            lines.push('  None reported');
+        }
+
+        lines.push('');
+        lines.push('─── 💊 CHRONIC CONDITIONS ───');
+
+        if (formData.chronicConditions?.length > 0) {
+            formData.chronicConditions.forEach(condition => {
+                lines.push(`  • ${condition}`);
+            });
+        } else {
+            lines.push('  None reported');
+        }
+
+        lines.push('');
+        lines.push('─── 📞 EMERGENCY CONTACTS ───');
+
+        if (formData.emergencyContacts?.length > 0) {
+            formData.emergencyContacts.forEach(contact => {
+                lines.push(`  ${contact.name} (${contact.relation})`);
+                lines.push(`  📱 ${contact.phone}`);
+                lines.push('');
+            });
+        } else {
+            lines.push('  None listed');
+        }
+
+        lines.push('═══════════════════════════');
+        lines.push(`Generated: ${new Date().toLocaleDateString()}`);
+
+        return lines.join('\n');
     };
 
     const isDarkMode = theme === 'dark';
@@ -262,29 +303,102 @@ const Dashboard = () => {
                                 />
                             </div>
 
+                            {/* Basic Info */}
                             <div className={clsx(
-                                "p-4 rounded-xl mb-6 text-sm",
+                                "p-4 rounded-xl mb-4 text-sm",
                                 isDarkMode ? "bg-slate-700/50" : "bg-slate-100"
                             )}>
-                                <div className="grid grid-cols-2 gap-2">
+                                <div className="grid grid-cols-2 gap-3">
                                     <div>
-                                        <p className="text-slate-500 text-xs">{t('dashboard.fullName')}</p>
+                                        <p className="text-slate-500 text-xs mb-1">{t('dashboard.fullName')}</p>
                                         <p className={clsx("font-semibold", isDarkMode ? "text-white" : "text-slate-800")}>{user?.name}</p>
                                     </div>
                                     <div>
-                                        <p className="text-slate-500 text-xs">{t('dashboard.bloodType')}</p>
-                                        <p className={clsx("font-semibold", isDarkMode ? "text-white" : "text-slate-800")}>{formData.bloodGroup || t('dashboard.none')}</p>
+                                        <p className="text-slate-500 text-xs mb-1">{t('dashboard.bloodType')}</p>
+                                        <p className={clsx("font-bold text-lg", isDarkMode ? "text-red-400" : "text-red-600")}>{formData.bloodGroup || t('dashboard.none')}</p>
                                     </div>
                                     <div>
-                                        <p className="text-slate-500 text-xs">{t('dashboard.age')}</p>
+                                        <p className="text-slate-500 text-xs mb-1">{t('dashboard.age')}</p>
                                         <p className={clsx("font-semibold", isDarkMode ? "text-white" : "text-slate-800")}>{formData.age || t('dashboard.none')}</p>
                                     </div>
                                     <div>
-                                        <p className="text-slate-500 text-xs">{t('dashboard.allergies')}</p>
-                                        <p className={clsx("font-semibold", isDarkMode ? "text-white" : "text-slate-800")}>{formData.allergies?.length || '0'}</p>
+                                        <p className="text-slate-500 text-xs mb-1">{t('dashboard.phone')}</p>
+                                        <p className={clsx("font-semibold", isDarkMode ? "text-white" : "text-slate-800")}>{formData.phone || t('dashboard.none')}</p>
                                     </div>
                                 </div>
                             </div>
+
+                            {/* Allergies Section */}
+                            <div className={clsx(
+                                "p-3 rounded-xl mb-3",
+                                isDarkMode ? "bg-orange-900/30 border border-orange-800/50" : "bg-orange-50 border border-orange-100"
+                            )}>
+                                <p className={clsx("text-xs font-bold mb-2 flex items-center gap-1", isDarkMode ? "text-orange-400" : "text-orange-700")}>
+                                    ⚠️ {t('dashboard.allergies')}
+                                </p>
+                                {formData.allergies?.length > 0 ? (
+                                    <div className="flex flex-wrap gap-1">
+                                        {formData.allergies.map((allergy, i) => (
+                                            <span key={i} className={clsx(
+                                                "px-2 py-1 rounded-full text-xs font-medium",
+                                                isDarkMode ? "bg-orange-800/50 text-orange-300" : "bg-orange-100 text-orange-700"
+                                            )}>
+                                                {allergy}
+                                            </span>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <p className={clsx("text-xs", isDarkMode ? "text-orange-400/70" : "text-orange-600/70")}>No known allergies</p>
+                                )}
+                            </div>
+
+                            {/* Chronic Conditions Section */}
+                            <div className={clsx(
+                                "p-3 rounded-xl mb-4",
+                                isDarkMode ? "bg-amber-900/30 border border-amber-800/50" : "bg-amber-50 border border-amber-100"
+                            )}>
+                                <p className={clsx("text-xs font-bold mb-2 flex items-center gap-1", isDarkMode ? "text-amber-400" : "text-amber-700")}>
+                                    💊 {t('dashboard.chronicConditions')}
+                                </p>
+                                {formData.chronicConditions?.length > 0 ? (
+                                    <div className="flex flex-wrap gap-1">
+                                        {formData.chronicConditions.map((condition, i) => (
+                                            <span key={i} className={clsx(
+                                                "px-2 py-1 rounded-full text-xs font-medium",
+                                                isDarkMode ? "bg-amber-800/50 text-amber-300" : "bg-amber-100 text-amber-700"
+                                            )}>
+                                                {condition}
+                                            </span>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <p className={clsx("text-xs", isDarkMode ? "text-amber-400/70" : "text-amber-600/70")}>No chronic conditions</p>
+                                )}
+                            </div>
+
+                            {/* Emergency Contacts Quick View */}
+                            {formData.emergencyContacts?.length > 0 && (
+                                <div className={clsx(
+                                    "p-3 rounded-xl mb-4",
+                                    isDarkMode ? "bg-green-900/30 border border-green-800/50" : "bg-green-50 border border-green-100"
+                                )}>
+                                    <p className={clsx("text-xs font-bold mb-2 flex items-center gap-1", isDarkMode ? "text-green-400" : "text-green-700")}>
+                                        📞 {t('dashboard.emergencyContacts')}
+                                    </p>
+                                    <div className="space-y-1">
+                                        {formData.emergencyContacts.slice(0, 2).map((contact, i) => (
+                                            <div key={i} className="flex items-center justify-between">
+                                                <span className={clsx("text-xs font-medium", isDarkMode ? "text-green-300" : "text-green-800")}>
+                                                    {contact.name} ({contact.relation})
+                                                </span>
+                                                <span className={clsx("text-xs", isDarkMode ? "text-green-400" : "text-green-600")}>
+                                                    {contact.phone}
+                                                </span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
 
                             <button
                                 onClick={() => setShowQrModal(false)}

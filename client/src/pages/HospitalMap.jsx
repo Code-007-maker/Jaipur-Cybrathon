@@ -8,10 +8,12 @@ import api from '../utils/api';
 import { Navigation, Phone, Clock } from 'lucide-react';
 import markerIconPng from "leaflet/dist/images/marker-icon.png";
 import markerShadowPng from "leaflet/dist/images/marker-shadow.png";
-import { useTranslation } from 'react-i18next';
+import clsx from 'clsx';
 
 const HospitalMap = () => {
     const { t } = useTranslation();
+    const { theme } = useTheme();
+    const isDarkMode = theme === 'dark';
     const [hospitals, setHospitals] = useState([]);
     const [loading, setLoading] = useState(true);
     // Mock user location for MVP (San Francisco)

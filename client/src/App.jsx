@@ -8,6 +8,7 @@ import Triage from './pages/Triage';
 import Emergency from './pages/Emergency';
 import HospitalMap from './pages/HospitalMap';
 import Chat from './pages/Chat';
+import EmergencyIdViewer from './pages/EmergencyIdViewer';
 
 // Protected Route Wrapper
 const ProtectedRoute = ({ children }) => {
@@ -22,24 +23,31 @@ function App() {
   return (
     <Router>
       <AuthProvider>
-        <Layout>
-          <Routes>
-            <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
+        <Routes>
+          {/* Public route for viewing health ID from QR scan */}
+          <Route path="/health-id" element={<EmergencyIdViewer />} />
 
-            <Route path="/" element={
-              <ProtectedRoute>
-                <Dashboard />
-              </ProtectedRoute>
-            } />
+          <Route path="/*" element={
+            <Layout>
+              <Routes>
+                <Route path="/login" element={<Login />} />
+                <Route path="/register" element={<Register />} />
 
-            {/* Placeholders for other routes */}
-            <Route path="/triage" element={<ProtectedRoute><Triage /></ProtectedRoute>} />
-            <Route path="/emergency" element={<ProtectedRoute><Emergency /></ProtectedRoute>} />
-            <Route path="/map" element={<ProtectedRoute><HospitalMap /></ProtectedRoute>} />
-            <Route path="/chat" element={<ProtectedRoute><Chat /></ProtectedRoute>} />
-          </Routes>
-        </Layout>
+                <Route path="/" element={
+                  <ProtectedRoute>
+                    <Dashboard />
+                  </ProtectedRoute>
+                } />
+
+                {/* Placeholders for other routes */}
+                <Route path="/triage" element={<ProtectedRoute><Triage /></ProtectedRoute>} />
+                <Route path="/emergency" element={<ProtectedRoute><Emergency /></ProtectedRoute>} />
+                <Route path="/map" element={<ProtectedRoute><HospitalMap /></ProtectedRoute>} />
+                <Route path="/chat" element={<ProtectedRoute><Chat /></ProtectedRoute>} />
+              </Routes>
+            </Layout>
+          } />
+        </Routes>
       </AuthProvider>
     </Router>
   );

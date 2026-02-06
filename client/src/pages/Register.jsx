@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { useTheme } from '../context/ThemeContext';
 import { Activity, Loader2 } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { useTranslation } from 'react-i18next';
+import clsx from 'clsx';
 
 const Register = () => {
     const { t } = useTranslation();
@@ -17,7 +17,6 @@ const Register = () => {
     const [loading, setLoading] = useState(false);
     const { register } = useAuth();
     const navigate = useNavigate();
-    const { t } = useTranslation();
 
     const handleSubmit = async (e) => {
         e.preventDefault();

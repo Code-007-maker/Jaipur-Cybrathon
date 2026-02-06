@@ -4,7 +4,6 @@ import { useTranslation } from 'react-i18next';
 import { useTheme } from '../context/ThemeContext';
 import api from '../utils/api';
 import clsx from 'clsx';
-import { useTranslation } from 'react-i18next';
 
 const Chat = () => {
     const { t } = useTranslation();
