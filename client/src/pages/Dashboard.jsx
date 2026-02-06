@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { QrCode, Heart, Activity, AlertCircle, Calendar, Phone, Edit3, MapPin, X, Plus, Trash2, Save, Send, Trash, Loader2 } from 'lucide-react';
+import { QrCode, Heart, Activity, AlertCircle, Calendar, Phone, Edit3, MapPin, Save, X, Plus, Trash2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../context/ThemeContext';
+import { QRCodeSVG } from 'qrcode.react';
 import clsx from 'clsx';
 import api from '../utils/api';
 import { QRCodeSVG } from 'qrcode.react';
@@ -17,10 +18,8 @@ const Dashboard = () => {
     const [isEditingPhone, setIsEditingPhone] = useState(false);
     const [isEditingMedical, setIsEditingMedical] = useState(false);
     const [isEditingEmergency, setIsEditingEmergency] = useState(false);
-    const [emergencyHistory, setEmergencyHistory] = useState([]);
-    const [loadingHistory, setLoadingHistory] = useState(true);
-    const [showQRModal, setShowQRModal] = useState(false);
-    const location = useLocation();
+    const [isEditingPastEmergencies, setIsEditingPastEmergencies] = useState(false);
+    const [showQrModal, setShowQrModal] = useState(false);
 
     const [formData, setFormData] = useState({
         phone: user?.phone || '',
@@ -29,7 +28,8 @@ const Dashboard = () => {
         bloodGroup: user?.bloodGroup || '',
         allergies: user?.allergies || [],
         chronicConditions: user?.chronicConditions || [],
-        emergencyContacts: user?.emergencyContacts || []
+        emergencyContacts: user?.emergencyContacts || [],
+        pastEmergencies: user?.pastEmergencies || []
     });
 
     const [locationLoading, setLocationLoading] = useState(false);
@@ -43,7 +43,8 @@ const Dashboard = () => {
                 bloodGroup: user.bloodGroup || '',
                 allergies: user.allergies || [],
                 chronicConditions: user.chronicConditions || [],
-                emergencyContacts: user.emergencyContacts || []
+                emergencyContacts: user.emergencyContacts || [],
+                pastEmergencies: user.pastEmergencies || []
             });
         }
         fetchHistory();
@@ -91,6 +92,7 @@ const Dashboard = () => {
             if (section === 'phone') setIsEditingPhone(false);
             if (section === 'medical') setIsEditingMedical(false);
             if (section === 'emergency') setIsEditingEmergency(false);
+            if (section === 'pastEmergencies') setIsEditingPastEmergencies(false);
         } catch (error) {
             alert("Failed to update profile");
         }
@@ -127,6 +129,48 @@ const Dashboard = () => {
         });
     };
 
+    // Past Emergencies handlers
+    const handleAddPastEmergency = () => {
+        const newEmergency = {
+            id: Date.now().toString(),
+            date: new Date().toISOString().split('T')[0],
+            title: '',
+            location: '',
+            status: 'complete'
+        };
+        setFormData(prev => ({
+            ...prev,
+            pastEmergencies: [...prev.pastEmergencies, newEmergency]
+        }));
+    };
+
+    const handlePastEmergencyChange = (index, field, value) => {
+        const updated = [...formData.pastEmergencies];
+        updated[index][field] = value;
+        setFormData(prev => ({ ...prev, pastEmergencies: updated }));
+    };
+
+    const handleRemovePastEmergency = (index) => {
+        setFormData(prev => ({
+            ...prev,
+            pastEmergencies: prev.pastEmergencies.filter((_, i) => i !== index)
+        }));
+    };
+
+    // Generate QR code data
+    const generateQrData = () => {
+        const healthData = {
+            name: user?.name,
+            bloodGroup: formData.bloodGroup,
+            age: formData.age,
+            allergies: formData.allergies,
+            chronicConditions: formData.chronicConditions,
+            emergencyContacts: formData.emergencyContacts,
+            phone: formData.phone
+        };
+        return JSON.stringify(healthData);
+    };
+
     const isDarkMode = theme === 'dark';
 
     const InfoCard = ({ icon: Icon, label, value, color }) => (
@@ -146,6 +190,15 @@ const Dashboard = () => {
 
     const isFirstTime = !user?.age || !user?.bloodGroup || user?.emergencyContacts?.length === 0;
 
+    const getStatusColor = (status) => {
+        switch (status) {
+            case 'discharged': return 'bg-red-500';
+            case 'complete': return 'bg-green-500';
+            case 'ongoing': return 'bg-amber-500';
+            default: return 'bg-blue-500';
+        }
+    };
+
     return (
         <div className="space-y-6">
             <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -154,11 +207,12 @@ const Dashboard = () => {
                     <p className="text-slate-500">{t('dashboard.subtitle')}</p>
                 </div>
                 <button
-                    onClick={() => setShowQRModal(true)}
+                    onClick={() => setShowQrModal(true)}
                     className={clsx(
                         "flex items-center gap-2 px-5 py-2.5 rounded-xl font-medium transition-colors",
                         isDarkMode ? "bg-white text-slate-900 hover:bg-slate-200" : "bg-slate-900 text-white hover:bg-slate-800"
-                    )}>
+                    )}
+                >
                     <QrCode className="w-5 h-5" />
                     {t('dashboard.showEmergencyId')}
                 </button>
@@ -166,40 +220,41 @@ const Dashboard = () => {
 
             {/* QR Code Modal */}
             <AnimatePresence>
-                {showQRModal && (
+                {showQrModal && (
                     <motion.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-                        onClick={() => setShowQRModal(false)}
+                        className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+                        onClick={() => setShowQrModal(false)}
                     >
                         <motion.div
-                            initial={{ opacity: 0, scale: 0.9, y: 20 }}
-                            animate={{ opacity: 1, scale: 1, y: 0 }}
-                            exit={{ opacity: 0, scale: 0.9, y: 20 }}
-                            onClick={(e) => e.stopPropagation()}
+                            initial={{ scale: 0.9, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0.9, opacity: 0 }}
                             className={clsx(
-                                "w-full max-w-sm rounded-3xl shadow-2xl p-6 text-center",
-                                isDarkMode ? "bg-slate-800" : "bg-white"
+                                "rounded-3xl p-8 max-w-md w-full shadow-2xl border",
+                                isDarkMode ? "bg-slate-800 border-slate-700" : "bg-white border-slate-100"
                             )}
+                            onClick={(e) => e.stopPropagation()}
                         >
-                            <div className="flex justify-between items-center mb-4">
-                                <h2 className={clsx("text-xl font-bold", isDarkMode ? "text-white" : "text-slate-900")}>
-                                    {t('dashboard.emergencyId') || 'Emergency Health ID'}
+                            <div className="text-center mb-6">
+                                <div className="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
+                                    <QrCode className="w-8 h-8 text-white" />
+                                </div>
+                                <h2 className={clsx("text-2xl font-bold mb-2", isDarkMode ? "text-white" : "text-slate-900")}>
+                                    {t('dashboard.emergencyIdTitle')}
                                 </h2>
-                                <button
-                                    onClick={() => setShowQRModal(false)}
-                                    className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
-                                >
-                                    <X className="w-5 h-5" />
-                                </button>
+                                <p className="text-slate-500">{t('dashboard.scanQrCode')}</p>
                             </div>
 
-                            <div className="bg-white p-4 rounded-2xl mx-auto inline-block mb-4 shadow-inner">
+                            <div className={clsx(
+                                "p-6 rounded-2xl flex items-center justify-center mb-6",
+                                isDarkMode ? "bg-white" : "bg-slate-50"
+                            )}>
                                 <QRCodeSVG
-                                    value={`http://192.168.91.1:5000/health-record/${user?.id || user?._id}`}
-                                    size={200}
+                                    value={generateQrData()}
+                                    size={220}
                                     level="H"
                                     includeMargin={true}
                                     bgColor="#ffffff"
@@ -207,23 +262,39 @@ const Dashboard = () => {
                                 />
                             </div>
 
-                            <p className={clsx("text-sm mb-2 font-medium", isDarkMode ? "text-white" : "text-slate-900")}>
-                                {user?.name}
-                            </p>
-                            <p className="text-xs text-slate-500 mb-4">
-                                {t('dashboard.scanQRMessage') || 'Scan this QR code to view emergency health information'}
-                            </p>
-
-                            <div className="flex gap-2 pt-2">
-                                <div className="flex-1 bg-red-50 rounded-xl p-3">
-                                    <p className="text-xs text-red-600 font-medium">{t('dashboard.bloodType') || 'Blood Type'}</p>
-                                    <p className="text-lg font-bold text-red-700">{formData.bloodGroup || 'N/A'}</p>
-                                </div>
-                                <div className="flex-1 bg-orange-50 rounded-xl p-3">
-                                    <p className="text-xs text-orange-600 font-medium">{t('dashboard.allergies') || 'Allergies'}</p>
-                                    <p className="text-lg font-bold text-orange-700">{formData.allergies?.length || 0}</p>
+                            <div className={clsx(
+                                "p-4 rounded-xl mb-6 text-sm",
+                                isDarkMode ? "bg-slate-700/50" : "bg-slate-100"
+                            )}>
+                                <div className="grid grid-cols-2 gap-2">
+                                    <div>
+                                        <p className="text-slate-500 text-xs">{t('dashboard.fullName')}</p>
+                                        <p className={clsx("font-semibold", isDarkMode ? "text-white" : "text-slate-800")}>{user?.name}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-slate-500 text-xs">{t('dashboard.bloodType')}</p>
+                                        <p className={clsx("font-semibold", isDarkMode ? "text-white" : "text-slate-800")}>{formData.bloodGroup || t('dashboard.none')}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-slate-500 text-xs">{t('dashboard.age')}</p>
+                                        <p className={clsx("font-semibold", isDarkMode ? "text-white" : "text-slate-800")}>{formData.age || t('dashboard.none')}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-slate-500 text-xs">{t('dashboard.allergies')}</p>
+                                        <p className={clsx("font-semibold", isDarkMode ? "text-white" : "text-slate-800")}>{formData.allergies?.length || '0'}</p>
+                                    </div>
                                 </div>
                             </div>
+
+                            <button
+                                onClick={() => setShowQrModal(false)}
+                                className={clsx(
+                                    "w-full py-3 rounded-xl font-bold transition-colors",
+                                    isDarkMode ? "bg-slate-700 text-white hover:bg-slate-600" : "bg-slate-900 text-white hover:bg-slate-800"
+                                )}
+                            >
+                                {t('dashboard.closeModal')}
+                            </button>
                         </motion.div>
                     </motion.div>
                 )}
@@ -258,7 +329,7 @@ const Dashboard = () => {
                 <InfoCard icon={Heart} label={t('dashboard.bloodType')} value={formData.bloodGroup} color="bg-red-500" />
                 <InfoCard icon={Activity} label={t('dashboard.age')} value={formData.age} color="bg-blue-500" />
                 <InfoCard icon={AlertCircle} label={t('dashboard.allergies')} value={formData.allergies?.length || '0'} color="bg-orange-500" />
-                <InfoCard icon={Calendar} label={t('dashboard.lastVisit')} value="Oct 24, 2025" color="bg-green-500" />
+                <InfoCard icon={Calendar} label={t('dashboard.lastVisit')} value={formData.pastEmergencies?.[0]?.date || t('dashboard.none')} color="bg-green-500" />
             </div>
 
             <div className="grid lg:grid-cols-3 gap-6">
@@ -533,6 +604,7 @@ const Dashboard = () => {
                         </div>
                     </motion.div>
 
+                    {/* Editable Past Emergencies */}
                     <motion.div
                         initial={{ opacity: 0, x: 20 }}
                         animate={{ opacity: 1, x: 0 }}
@@ -543,43 +615,94 @@ const Dashboard = () => {
                         )}
                     >
                         <div className="flex items-center justify-between mb-4">
-                            <h2 className={clsx("text-xl font-bold", theme === 'dark' ? "text-white" : "text-slate-900")}>{t('dashboard.pastEmergencies')}</h2>
-                            <button
-                                onClick={fetchHistory}
-                                className="text-slate-400 hover:text-blue-600 transition-colors"
-                                title="Refresh History"
-                            >
-                                <Activity className={clsx("w-4 h-4", loadingHistory && "animate-spin")} />
-                            </button>
+                            <h2 className={clsx("text-xl font-bold", isDarkMode ? "text-white" : "text-slate-900")}>{t('dashboard.pastEmergencies')}</h2>
+                            {!isEditingPastEmergencies ? (
+                                <button onClick={() => setIsEditingPastEmergencies(true)} className="text-blue-600 p-2"><Edit3 className="w-5 h-5" /></button>
+                            ) : (
+                                <div className="flex gap-2">
+                                    <button onClick={() => setIsEditingPastEmergencies(false)} className="text-slate-400 p-2"><X className="w-5 h-5" /></button>
+                                    <button onClick={() => handleSave('pastEmergencies')} className="text-green-500 p-2"><Save className="w-5 h-5" /></button>
+                                </div>
+                            )}
                         </div>
-                        <div className="mt-4 space-y-6 relative pl-4 border-l-2 border-slate-100 dark:border-slate-700 min-h-[100px]">
-                            {loadingHistory ? (
-                                <p className="text-sm text-slate-500 py-4 italic">Loading history...</p>
-                            ) : emergencyHistory.length > 0 ? (
-                                emergencyHistory.map((item, idx) => (
-                                    <div key={item._id} className="relative">
-                                        <div className={clsx(
-                                            "absolute -left-[21px] top-1 w-3 h-3 rounded-full ring-4 ring-white dark:ring-slate-800",
-                                            item.status === 'resolved' ? "bg-green-500" : "bg-red-400"
-                                        )}></div>
-                                        <p className="text-[10px] text-slate-400 font-bold uppercase mb-0.5">
-                                            {new Date(item.createdAt).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' })}
-                                        </p>
-                                        <p className={clsx("font-semibold leading-tight", theme === 'dark' ? "text-slate-200" : "text-slate-800")}>
-                                            {item.severity} Emergency
-                                        </p>
-                                        <p className="text-[11px] text-slate-500 mt-1">
-                                            {item.location?.address?.split(',').slice(0, 2).join(',') || "Location unavailable"}
-                                        </p>
-                                        <div className="mt-2 flex gap-2">
-                                            <span className="px-2 py-0.5 bg-slate-100 dark:bg-slate-700 rounded-md text-[9px] font-bold text-slate-500 uppercase">
-                                                {item.status}
-                                            </span>
-                                        </div>
+
+                        <div className={clsx(
+                            "space-y-4 relative",
+                            !isEditingPastEmergencies && "pl-4 border-l-2",
+                            isDarkMode ? "border-slate-700" : "border-slate-100"
+                        )}>
+                            {formData.pastEmergencies?.length > 0 ? (
+                                formData.pastEmergencies.map((emergency, i) => (
+                                    <div key={emergency.id || i} className="relative">
+                                        {isEditingPastEmergencies ? (
+                                            <div className={clsx(
+                                                "p-3 rounded-xl border space-y-2",
+                                                isDarkMode ? "bg-slate-700/50 border-slate-600" : "bg-slate-50 border-slate-100"
+                                            )}>
+                                                <div className="flex gap-2">
+                                                    <input
+                                                        type="date"
+                                                        value={emergency.date}
+                                                        onChange={(e) => handlePastEmergencyChange(i, 'date', e.target.value)}
+                                                        className={clsx("flex-1 p-2 text-sm rounded border", isDarkMode ? "bg-slate-600 border-slate-500 text-white" : "bg-white border-slate-200")}
+                                                    />
+                                                    <button onClick={() => handleRemovePastEmergency(i)} className="text-red-500 p-1"><Trash2 className="w-4 h-4" /></button>
+                                                </div>
+                                                <input
+                                                    placeholder={t('dashboard.eventTitle')}
+                                                    value={emergency.title}
+                                                    onChange={(e) => handlePastEmergencyChange(i, 'title', e.target.value)}
+                                                    className={clsx("w-full p-2 text-sm rounded border", isDarkMode ? "bg-slate-600 border-slate-500 text-white" : "bg-white border-slate-200")}
+                                                />
+                                                <input
+                                                    placeholder={t('dashboard.location')}
+                                                    value={emergency.location}
+                                                    onChange={(e) => handlePastEmergencyChange(i, 'location', e.target.value)}
+                                                    className={clsx("w-full p-2 text-sm rounded border", isDarkMode ? "bg-slate-600 border-slate-500 text-white" : "bg-white border-slate-200")}
+                                                />
+                                                <select
+                                                    value={emergency.status}
+                                                    onChange={(e) => handlePastEmergencyChange(i, 'status', e.target.value)}
+                                                    className={clsx("w-full p-2 text-sm rounded border", isDarkMode ? "bg-slate-600 border-slate-500 text-white" : "bg-white border-slate-200")}
+                                                >
+                                                    <option value="discharged">Discharged</option>
+                                                    <option value="complete">Complete</option>
+                                                    <option value="ongoing">Ongoing</option>
+                                                </select>
+                                            </div>
+                                        ) : (
+                                            <>
+                                                <div className={clsx(
+                                                    "absolute -left-[21px] top-1 w-3 h-3 rounded-full ring-4",
+                                                    getStatusColor(emergency.status),
+                                                    isDarkMode ? "ring-slate-800" : "ring-white"
+                                                )}></div>
+                                                <p className="text-sm text-slate-500 mb-1">{emergency.date}</p>
+                                                <p className={clsx("font-semibold", isDarkMode ? "text-slate-200" : "text-slate-800")}>{emergency.title}</p>
+                                                <p className="text-xs text-slate-500">{emergency.location} • {emergency.status}</p>
+                                            </>
+                                        )}
                                     </div>
                                 ))
                             ) : (
-                                <p className="text-sm text-slate-500 py-4 italic text-center">No past emergencies found.</p>
+                                !isEditingPastEmergencies && (
+                                    <p className="text-center text-sm text-slate-500 py-4">{t('dashboard.noEmergencies')}</p>
+                                )
+                            )}
+
+                            {isEditingPastEmergencies && (
+                                <button
+                                    onClick={handleAddPastEmergency}
+                                    className={clsx(
+                                        "w-full py-3 border border-dashed rounded-xl font-medium transition-colors flex items-center justify-center gap-2",
+                                        isDarkMode
+                                            ? "border-slate-600 text-slate-400 hover:bg-slate-700 hover:text-blue-400"
+                                            : "border-slate-300 text-slate-500 hover:bg-slate-50 hover:text-blue-600"
+                                    )}
+                                >
+                                    <Plus className="w-4 h-4" />
+                                    {t('dashboard.addEmergency')}
+                                </button>
                             )}
                         </div>
                     </motion.div>

@@ -55,6 +55,7 @@
         "edit": "Edit",
         "none": "N/A",
         "liveLocation": "Live Location",
+<<<<<<< HEAD
         "emergencyIdTitle": "Emergency ID",
         "scanQrCode": "Scan this QR code for emergency info",
         "closeModal": "Close",
@@ -64,6 +65,75 @@
         "addEmergency": "Add Emergency Record",
         "eventTitle": "Event Title",
         "location": "Location"
+=======
+        "emergencyIdTitle": "Emergency Health ID",
+        "scanQrCode": "Scan this QR code to view medical records",
+        "closeModal": "Close",
+        "addEmergency": "Add Emergency",
+        "noEmergencies": "No past emergencies recorded.",
+        "date": "Date",
+        "eventTitle": "Event Title",
+        "location": "Location",
+        "status": "Status"
+    },
+    "chat": {
+        "title": "AI Medical Assistant",
+        "subtitle": "Always verify with a doctor",
+        "placeholder": "Type your health concern...",
+        "thinking": "Thinking...",
+        "greeting": "Hello, I am CareGrid AI. How can I assist you with your health today?",
+        "errorMessage": "I'm sorry, I'm having trouble connecting right now."
+    },
+    "emergency": {
+        "title": "Emergency Active",
+        "status": "Status",
+        "loading": "Loading Emergency Status...",
+        "noActive": "No Active Emergency",
+        "safeMessage": "You are safe. Use the SOS button if you need immediate assistance.",
+        "searching": "Searching",
+        "assigned": "Responder Assigned",
+        "enRoute": "En Route",
+        "arrived": "Arrived",
+        "responderAssigned": "Responder Assigned",
+        "estimatedArrival": "Estimated Arrival",
+        "contact": "Contact",
+        "liveLocation": "Live Location Tracking",
+        "mapLoading": "Map view is loading..."
+    },
+    "hospitalMap": {
+        "title": "Hospital Routing",
+        "subtitle": "Find the nearest specialized care.",
+        "loading": "Loading Map Data...",
+        "youAreHere": "You are here",
+        "navigate": "Navigate",
+        "call": "Call",
+        "kmAway": "km away",
+        "beds": "Beds"
+    },
+    "login": {
+        "title": "Welcome Back",
+        "subtitle": "Access your health grid",
+        "email": "Email Address",
+        "password": "Password",
+        "emailPlaceholder": "you@caregrid.ai",
+        "signIn": "Sign In",
+        "noAccount": "Don't have an account?",
+        "createId": "Create ID",
+        "loginFailed": "Login failed"
+    },
+    "register": {
+        "title": "Create ID",
+        "subtitle": "Your secure health identity",
+        "fullName": "Full Name",
+        "namePlaceholder": "John Doe",
+        "email": "Email Address",
+        "emailPlaceholder": "you@caregrid.ai",
+        "password": "Password",
+        "getStarted": "Get Started",
+        "hasAccount": "Already have an ID?",
+        "signIn": "Sign In",
+        "registerFailed": "Registration failed"
+>>>>>>> 3c45f56fcbdfc684ca2663525f0806b61712f152
     },
     "triage": {
         "title": "AI Health Assessment",
@@ -96,6 +166,7 @@
             "stomachPain": "Stomach Pain",
             "shortnessOfBreath": "Shortness of Breath"
         }
+<<<<<<< HEAD
     },
     "emergency": {
         "title": "Emergency Active",
@@ -144,5 +215,7 @@
         "confirmMessage": "This will alert emergency services and your contacts.",
         "confirm": "Yes, I Need Help",
         "cancel": "Cancel"
+=======
+>>>>>>> 3c45f56fcbdfc684ca2663525f0806b61712f152
     }
 }

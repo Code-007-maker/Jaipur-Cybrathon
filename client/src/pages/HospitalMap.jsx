@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import { Icon } from 'leaflet';
+import { useTranslation } from 'react-i18next';
+import { useTheme } from '../context/ThemeContext';
 import api from '../utils/api';
 import { Navigation, Phone, Clock } from 'lucide-react';
 import markerIconPng from "leaflet/dist/images/marker-icon.png";
@@ -62,16 +64,23 @@ const HospitalMap = () => {
                 </div>
             </header>
 
-            <div className="h-[600px] rounded-3xl overflow-hidden shadow-xl border border-slate-200 relative z-0">
+            <div className={clsx(
+                "h-[600px] rounded-3xl overflow-hidden shadow-xl relative z-0 border",
+                isDarkMode ? "border-slate-700" : "border-slate-200"
+            )}>
                 <MapContainer center={[userLocation.lat, userLocation.lng]} zoom={13} style={{ height: '100%', width: '100%' }}>
                     <TileLayer
                         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                        url={isDarkMode
+                            ? "https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png"
+                            : "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                        }
                     />
 
                     {/* User Marker */}
                     <Marker position={[userLocation.lat, userLocation.lng]} icon={defaultIcon}>
                         <Popup>
+                            <div className="font-bold">{t('hospitalMap.youAreHere')}</div>
                             <div className="font-bold">{t('hospitalMap.youAreHere')}</div>
                         </Popup>
                     </Marker>
@@ -91,13 +100,16 @@ const HospitalMap = () => {
                                     <div className="flex items-center gap-2 mb-2 text-sm">
                                         <Clock className="w-4 h-4 text-green-600" />
                                         <span className="text-green-700 font-medium">{calculateDistance(userLocation.lat, userLocation.lng, hospital.location.lat, hospital.location.lng)} {t('hospitalMap.kmAway')}</span>
+                                        <span className="text-green-700 font-medium">{calculateDistance(userLocation.lat, userLocation.lng, hospital.location.lat, hospital.location.lng)} {t('hospitalMap.kmAway')}</span>
                                     </div>
 
                                     <div className="flex gap-2 mt-3">
                                         <button className="flex-1 bg-blue-600 text-white py-2 rounded-lg text-xs font-bold flex items-center justify-center gap-1">
                                             <Navigation className="w-3 h-3" /> {t('hospitalMap.navigate')}
+                                            <Navigation className="w-3 h-3" /> {t('hospitalMap.navigate')}
                                         </button>
                                         <button className="flex-1 bg-slate-100 text-slate-700 py-2 rounded-lg text-xs font-bold flex items-center justify-center gap-1">
+                                            <Phone className="w-3 h-3" /> {t('hospitalMap.call')}
                                             <Phone className="w-3 h-3" /> {t('hospitalMap.call')}
                                         </button>
                                     </div>
@@ -110,15 +122,24 @@ const HospitalMap = () => {
 
             <div className="grid md:grid-cols-3 gap-4">
                 {hospitals.map(hospital => (
-                    <div key={hospital._id} className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow">
+                    <div key={hospital._id} className={clsx(
+                        "p-4 rounded-xl border shadow-sm hover:shadow-md transition-all",
+                        isDarkMode ? "bg-slate-800 border-slate-700" : "bg-white border-slate-100"
+                    )}>
                         <div className="flex justify-between items-start mb-2">
                             <h3 className="font-bold text-slate-900 line-clamp-1">{hospital.name}</h3>
                             <span className="bg-green-100 text-green-700 text-xs px-2 py-1 rounded-full font-bold">
                                 {hospital.availableBeds} {t('hospitalMap.beds')}
                             </span>
                         </div>
-                        <p className="text-xs text-slate-500 mb-3">{hospital.location.address}</p>
-                        <div className="flex items-center gap-2 text-sm font-medium text-slate-700">
+                        <p className={clsx(
+                            "text-xs mb-3",
+                            isDarkMode ? "text-slate-400" : "text-slate-500"
+                        )}>{hospital.location.address}</p>
+                        <div className={clsx(
+                            "flex items-center gap-2 text-sm font-medium",
+                            isDarkMode ? "text-slate-300" : "text-slate-700"
+                        )}>
                             <Navigation className="w-4 h-4 text-blue-500" />
                             {calculateDistance(userLocation.lat, userLocation.lng, hospital.location.lat, hospital.location.lng)} km
                         </div>
