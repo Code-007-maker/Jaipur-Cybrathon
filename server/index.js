@@ -61,6 +61,7 @@ app.use('/api/triage', require('./routes/triageRoutes'));
 app.use('/api/emergency', require('./routes/emergencyRoutes'));
 app.use('/api/hospitals', require('./routes/hospitalRoutes'));
 app.use('/api/chat', require('./routes/chatRoutes'));
+app.use('/api/reports', require('./routes/reportRoutes'));
 app.use('/health-record', require('./routes/healthRecordRoutes')); // Public health record page for QR code
 
 app.get('/', (req, res) => {
