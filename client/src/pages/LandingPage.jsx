@@ -6,6 +6,7 @@ import {
     Calendar, Database, Lock
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import aiVideo from '../assets/AI.mp4';
 
 const LandingPage = () => {
     const navigate = useNavigate();
@@ -110,7 +111,7 @@ const LandingPage = () => {
                             initial={{ opacity: 0, y: 30 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ duration: 0.8 }}
-                            className="lg:w-2/3 max-w-4xl"
+                            className="lg:w-1/2 max-w-3xl"
                         >
                             <div className="inline-flex items-center gap-2 bg-white/80 backdrop-blur-md border border-slate-200 px-4 py-2 rounded-full text-sm font-medium mb-8 text-primary-700 shadow-sm">
                                 <span className="flex h-2 w-2 relative">
@@ -159,8 +160,25 @@ const LandingPage = () => {
                             </div>
                         </motion.div>
 
-                        {/* Optional: Abstract 3D Element or Minimalist Graphic can go here if needed,
-                            but clean typography on a great image is often more professional. */}
+                        {/* Right Side Video */}
+                        <motion.div
+                            initial={{ opacity: 0, x: 50 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ duration: 0.8, delay: 0.2 }}
+                            className="lg:w-1/2 w-full relative z-10"
+                        >
+                            <div className="rounded-2xl overflow-hidden shadow-2xl border-4 border-white/50 backdrop-blur-sm relative group">
+                                <div className="absolute inset-0 bg-primary-900/10 group-hover:bg-transparent transition-colors duration-300 z-10 pointer-events-none" />
+                                <video
+                                    src={aiVideo}
+                                    autoPlay
+                                    loop
+                                    speed={0.7}
+                                    playsInline
+                                    className="w-full h-auto object-cover transform group-hover:scale-105 transition-transform duration-700"
+                                />
+                            </div>
+                        </motion.div>
                     </div>
                 </div>
 
