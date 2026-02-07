@@ -13,6 +13,7 @@ const Dashboard = () => {
     const { user, updateProfile } = useAuth();
     const { t } = useTranslation();
     const { theme } = useTheme();
+    const location = useLocation();
 
     const [isEditingPhone, setIsEditingPhone] = useState(false);
     const [isEditingMedical, setIsEditingMedical] = useState(false);

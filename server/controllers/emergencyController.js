@@ -191,6 +191,12 @@ exports.resolveSOS = async (req, res) => {
         emergency.timeline.push({ status: 'resolved' });
         await emergency.save();
 
+        // Emit socket update to notify client that emergency is resolved
+        const io = req.app.get('io');
+        if (io) {
+            io.emit(`emergency_update_${emergency.user}`, emergency);
+        }
+
         console.log(`[Emergency] Case ${caseId} resolved successfully`);
         res.json(emergency);
     } catch (err) {

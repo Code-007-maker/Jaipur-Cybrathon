@@ -36,11 +36,11 @@ const Register = () => {
 
     return (
         <div className={clsx(
-            "min-h-screen flex items-center justify-center p-6 relative overflow-hidden transition-colors duration-500",
+            "fixed inset-0 flex items-center justify-center p-6 overflow-hidden transition-colors duration-500",
             isDarkMode ? "bg-slate-950" : "bg-slate-50"
         )}>
             {/* Immersive Animated Background */}
-            <div className="absolute inset-0 overflow-hidden">
+            <div className="fixed inset-0 overflow-hidden pointer-events-none">
                 <motion.div
                     animate={{
                         scale: [1, 1.3, 1],
