@@ -4,8 +4,8 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../context/ThemeContext';
-import { MapPin, Phone, Shield, Search, CheckCircle, Ambulance, Bell, Check } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { MapPin, Phone, Shield, Search, CheckCircle, Ambulance, Bell, Check, Activity, AlertCircle, Info, ChevronDown } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import api from '../utils/api';
 import clsx from 'clsx';
 
@@ -61,13 +61,28 @@ const Emergency = () => {
     };
 
     const handleResolve = async () => {
+        const caseId = activeCase?._id || activeCase?.id;
+        if (!caseId) {
+            alert("No active case ID found. Please refresh.");
+            return;
+        }
         setIsResolving(true);
         try {
-            await api.patch(`/emergency/${activeCase._id}/resolve`);
+            // Updated to use the correct RESTful path we confirmed in backend
+            await api.patch(`/emergency/${caseId}/resolve`);
             setActiveCase(prev => ({ ...prev, status: 'resolved' }));
             navigate('/dashboard');
         } catch (err) {
-            console.error('Failed to resolve emergency:', err);
+            console.error('Failed to resolve emergency (PATCH):', err);
+            // Fallback to legacy POST if for some reason PATCH fails
+            try {
+                await api.post('/emergency/resolve', { caseId });
+                setActiveCase(prev => ({ ...prev, status: 'resolved' }));
+                navigate('/dashboard');
+            } catch (postErr) {
+                console.error('Failed to resolve emergency (POST):', postErr);
+                alert(`Error: ${postErr.response?.data?.msg || postErr.message || "Failed to mark as safe"}`);
+            }
         } finally {
             setIsResolving(false);
         }
@@ -143,6 +158,9 @@ const Emergency = () => {
                     })}
                 </div>
             </div>
+
+            {/* Decision Trace Panel */}
+            <DecisionTracePanel trace={activeCase.decisionTrace} isDarkMode={isDarkMode} role={user?.role} />
 
             <div className="grid md:grid-cols-2 gap-6">
                 {/* Responder Details */}
@@ -284,6 +302,197 @@ const Emergency = () => {
                 )}
             </div>
         </div>
+    );
+};
+
+const DecisionTracePanel = ({ trace, isDarkMode, role }) => {
+    if (!trace) return null;
+    const [isOpen, setIsOpen] = useState(false);
+
+    const isMedical = role === 'doctor' || role === 'responder';
+
+    return (
+        <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className={clsx(
+                "rounded-3xl border overflow-hidden transition-all shadow-lg",
+                isDarkMode ? "bg-slate-800 border-slate-700 shadow-slate-900/20" : "bg-white border-slate-100 shadow-slate-200"
+            )}
+        >
+            <button
+                onClick={() => setIsOpen(!isOpen)}
+                className="w-full p-6 flex flex-col md:flex-row md:items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors gap-4"
+            >
+                <div className="flex items-center gap-3">
+                    <div className="p-2.5 bg-blue-600 rounded-2xl shadow-lg shadow-blue-500/20">
+                        <Activity className="w-5 h-5 text-white" />
+                    </div>
+                    <div className="text-left">
+                        <h3 className={clsx("font-bold text-lg", isDarkMode ? "text-white" : "text-slate-900")}>
+                            Emergency Decision Trace
+                        </h3>
+                        <p className="text-xs text-slate-500 font-medium">Explainable AI & Accountability Layer</p>
+                    </div>
+                </div>
+                <div className="flex items-center gap-3 self-end md:self-center">
+                    <div className={clsx(
+                        "px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border",
+                        trace.finalDecision?.severity === 'Critical'
+                            ? "bg-red-500/10 text-red-500 border-red-500/20"
+                            : "bg-orange-500/10 text-orange-500 border-orange-500/20"
+                    )}>
+                        {trace.finalDecision?.severity || 'High'} Risk Assessment
+                    </div>
+                    <motion.div
+                        animate={{ rotate: isOpen ? 180 : 0 }}
+                        className={clsx(
+                            "p-1 rounded-full",
+                            isDarkMode ? "bg-slate-700 text-slate-400" : "bg-slate-100 text-slate-500"
+                        )}
+                    >
+                        <ChevronDown className="w-5 h-5" />
+                    </motion.div>
+                </div>
+            </button>
+
+            <AnimatePresence>
+                {isOpen && (
+                    <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        className="border-t border-slate-100 dark:border-slate-700 overflow-hidden"
+                    >
+                        <div className="p-6 space-y-8">
+                            {/* Summary Section */}
+                            <div className="p-5 bg-gradient-to-r from-blue-600/10 to-transparent dark:from-blue-600/20 rounded-2xl border-l-4 border-blue-600">
+                                <p className={clsx("text-sm leading-relaxed font-medium", isDarkMode ? "text-blue-100" : "text-slate-700")}>
+                                    <span className="text-blue-600 dark:text-blue-400 font-black uppercase text-[10px] block mb-1">System Reasoning Analysis</span>
+                                    {trace.aiReasoning || "System evaluating priority based on user distress signal."}
+                                </p>
+                            </div>
+
+                            {/* Evidence Grid */}
+                            <div className="grid md:grid-cols-2 gap-8">
+                                <div className="space-y-4">
+                                    <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] flex items-center gap-2">
+                                        <div className="w-1 h-3 bg-slate-300 rounded-full" /> Input Evidence
+                                    </h4>
+                                    <div className="flex flex-wrap gap-2">
+                                        {trace.inputEvidence?.symptoms?.map((s, i) => (
+                                            <div key={i} className="px-3 py-1.5 rounded-xl bg-slate-50 dark:bg-slate-700/50 border border-slate-100 dark:border-slate-600 text-xs font-semibold text-slate-600 dark:text-slate-300">
+                                                {s}
+                                            </div>
+                                        ))}
+                                    </div>
+                                    <div className="flex flex-wrap gap-2">
+                                        {trace.inputEvidence?.historyFlags?.map((f, i) => (
+                                            <div key={i} className="px-3 py-1.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-[10px] font-black text-amber-600 uppercase flex items-center gap-1.5">
+                                                <AlertCircle className="w-3 h-3" />
+                                                {f}
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                                <div className="space-y-4">
+                                    <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] flex items-center gap-2">
+                                        <div className="w-1 h-3 bg-slate-300 rounded-full" /> Vital Parameters Used
+                                    </h4>
+                                    <div className="grid grid-cols-3 gap-3">
+                                        <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-700/50 border border-slate-100 dark:border-slate-600 text-center">
+                                            <p className="text-[8px] text-slate-400 font-black uppercase mb-1">Heart</p>
+                                            <p className="font-black text-lg text-slate-800 dark:text-white leading-none tracking-tight">
+                                                {trace.inputEvidence?.vitals?.heartRate} <span className="text-[8px] opacity-40">BPM</span>
+                                            </p>
+                                        </div>
+                                        <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-700/50 border border-slate-100 dark:border-slate-600 text-center">
+                                            <p className="text-[8px] text-slate-400 font-black uppercase mb-1">spO2</p>
+                                            <p className="font-black text-lg text-slate-800 dark:text-white leading-none tracking-tight">
+                                                {trace.inputEvidence?.vitals?.oxygen} <span className="text-[8px] opacity-40">%</span>
+                                            </p>
+                                        </div>
+                                        <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-700/50 border border-slate-100 dark:border-slate-600 text-center">
+                                            <p className="text-[8px] text-slate-400 font-black uppercase mb-1">Temp</p>
+                                            <p className="font-black text-lg text-slate-800 dark:text-white leading-none tracking-tight">
+                                                {trace.inputEvidence?.vitals?.temperature} <span className="text-[8px] opacity-40">°F</span>
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Medical-only details */}
+                            {isMedical ? (
+                                <motion.div
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    className="space-y-6 pt-6 border-t border-slate-100 dark:border-slate-700/50"
+                                >
+                                    <div>
+                                        <h4 className="text-[10px] font-black text-red-400 uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
+                                            <div className="w-1 h-3 bg-red-400 rounded-full" /> System Logic & Rule Triggers
+                                        </h4>
+                                        <div className="grid sm:grid-cols-2 gap-4">
+                                            {trace.rulesTriggered?.map((rule, i) => (
+                                                <div key={i} className="p-4 bg-red-500/5 rounded-2xl border border-red-500/10 flex items-start gap-3">
+                                                    <div className="mt-1 w-1.5 h-1.5 rounded-full bg-red-500 shrink-0" />
+                                                    <div>
+                                                        <p className="text-xs font-black text-red-600 dark:text-red-400 uppercase tracking-wider mb-1">{rule.ruleName}</p>
+                                                        <p className="text-xs text-slate-500 dark:text-slate-400 font-medium leading-relaxed">{rule.reason}</p>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    <div className="flex flex-col sm:flex-row gap-4">
+                                        <div className="flex-1 flex items-center justify-between p-4 bg-amber-500/5 rounded-2xl border border-amber-500/10">
+                                            <div>
+                                                <p className="text-[10px] font-black text-amber-600 uppercase tracking-widest mb-1">Confidence Score</p>
+                                                <div className="w-full bg-amber-500/10 h-1.5 rounded-full mt-2">
+                                                    <div className="bg-amber-500 h-full rounded-full" style={{ width: `${trace.confidence}%` }}></div>
+                                                </div>
+                                            </div>
+                                            <div className="text-2xl font-black text-amber-600 pl-4">{trace.confidence}%</div>
+                                        </div>
+
+                                        {trace.uncertainty && (
+                                            <div className="flex-1 flex items-start gap-3 p-4 bg-slate-50 dark:bg-slate-700/30 rounded-2xl border border-slate-100 dark:border-slate-600">
+                                                <Info className="w-5 h-5 text-slate-400 shrink-0 mt-0.5" />
+                                                <div>
+                                                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">AI Uncertainty Flags</p>
+                                                    <p className="text-xs text-slate-500 italic font-medium leading-relaxed">{trace.uncertainty}</p>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                </motion.div>
+                            ) : (
+                                <div className="pt-6 border-t border-slate-100 dark:border-slate-700/50">
+                                    <div className="p-4 bg-emerald-500/5 rounded-2xl border border-emerald-500/10 flex items-center gap-4">
+                                        <div className="p-2 bg-emerald-500 rounded-xl">
+                                            <CheckCircle className="w-5 h-5 text-white" />
+                                        </div>
+                                        <div>
+                                            <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest mb-0.5">Patient Reassurance</p>
+                                            <p className="text-xs text-slate-600 dark:text-slate-400 font-medium">CareGrid AI has analyzed your data. Assistance is already optimized for your specific needs.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Safety Disclaimer */}
+                            <div className="text-center pt-2">
+                                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest opacity-60">
+                                    Accountability Disclaimer: {trace.disclaimer || "AI-assisted decision support. Not a medical diagnosis."}
+                                </p>
+                            </div>
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+        </motion.div>
     );
 };
 

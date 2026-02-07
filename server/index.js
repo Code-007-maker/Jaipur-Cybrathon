@@ -56,7 +56,9 @@ mongoose.connection.on('disconnected', () => {
 connectDB();
 
 // Routes
+console.log('Registering routes...');
 app.use('/api/auth', require('./routes/authRoutes'));
+console.log(' - /api/auth registered');
 app.use('/api/triage', require('./routes/triageRoutes'));
 app.use('/api/emergency', require('./routes/emergencyRoutes'));
 app.use('/api/hospitals', require('./routes/hospitalRoutes'));

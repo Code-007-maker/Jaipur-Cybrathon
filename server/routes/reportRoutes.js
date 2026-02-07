@@ -91,4 +91,7 @@ router.post('/:id/analyze', auth, reportController.triggerAnalysis);
 // PATCH /api/reports/:id/emergency
 router.patch('/:id/emergency', auth, reportController.toggleEmergencyRelevant);
 
+// Add doctor's note
+router.post('/:id/notes', auth, reportController.addNote);
+
 module.exports = router;

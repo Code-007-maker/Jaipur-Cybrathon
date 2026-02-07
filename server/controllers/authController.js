@@ -1,5 +1,7 @@
 const User = require('../models/User');
+const DoctorOTP = require('../models/DoctorOTP');
 const jwt = require('jsonwebtoken');
+const { sendEmail } = require('../utils/mailer');
 
 // @desc    Register user
 // @route   POST /api/auth/register
@@ -38,7 +40,14 @@ exports.register = async (req, res) => {
         }
 
         console.log("Step 4: Signing JWT...");
-        const payload = { user: { id: user.id } };
+        const payload = {
+            user: {
+                id: user.id,
+                name: user.name,
+                email: user.email,
+                role: user.role || 'patient'
+            }
+        };
         jwt.sign(payload, secret, { expiresIn: 360000 }, (err, token) => {
             if (err) {
                 console.error("JWT Signing Error:", err);
@@ -102,7 +111,14 @@ exports.login = async (req, res) => {
             return res.status(400).json({ msg: 'Invalid Credentials' });
         }
 
-        const payload = { user: { id: user.id } };
+        const payload = {
+            user: {
+                id: user.id,
+                name: user.name,
+                email: user.email,
+                role: user.role
+            }
+        };
         jwt.sign(payload, secret, { expiresIn: 360000 }, (err, token) => {
             if (err) {
                 console.error("JWT Signing Error:", err);
@@ -120,10 +136,27 @@ exports.login = async (req, res) => {
 // @route   GET /api/auth/user
 exports.getUser = async (req, res) => {
     try {
-        const user = await User.findById(req.user.id).select('-password');
+        const user = await User.findById(req.user.id).select('-password').lean();
         if (!user) {
             return res.status(404).json({ msg: 'User not found' });
         }
+
+        // If the token indicates a doctor role (temporary access), override the role
+        if (req.user.role === 'doctor' && req.user.isTemporary) {
+            user.patientName = user.name; // Keep original user name as patient name
+            user.name = `Dr. ${req.user.doctorName}`; // Set name to doctor name
+            user.role = 'doctor';
+            user.doctorName = req.user.doctorName;
+            user.doctorEmail = req.user.doctorEmail;
+            user.isTemporary = true;
+
+            const token = req.header('x-auth-token');
+            const decoded = jwt.decode(token);
+            if (decoded && decoded.exp) {
+                user.expiresAt = decoded.exp * 1000;
+            }
+        }
+
         res.json(user);
     } catch (err) {
         console.error('GetUser Error:', err.message);
@@ -151,5 +184,99 @@ exports.updateProfile = async (req, res) => {
     } catch (err) {
         console.error('UpdateProfile Error:', err.message);
         res.status(500).json({ msg: 'Server error updating profile' });
+    }
+};
+
+// @desc    Initiate Doctor Login (Send OTP to Patient)
+// @route   POST /api/auth/doctor-login-init
+exports.initDoctorLogin = async (req, res) => {
+    const { doctorName, doctorEmail, patientEmail } = req.body;
+    try {
+        const patient = await User.findOne({ email: patientEmail.toLowerCase(), role: 'patient' });
+        if (!patient) {
+            return res.status(404).json({ msg: 'Patient not found' });
+        }
+
+        const otp = Math.floor(100000 + Math.random() * 900000).toString();
+        const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
+
+        await DoctorOTP.deleteMany({ doctorEmail: doctorEmail.toLowerCase(), patientEmail: patientEmail.toLowerCase() });
+        const newOTP = new DoctorOTP({
+            doctorName,
+            doctorEmail: doctorEmail.toLowerCase(),
+            patientEmail: patientEmail.toLowerCase(),
+            otp,
+            expiresAt
+        });
+        await newOTP.save();
+
+        const subject = 'Doctor Access Request - CareGrid AI';
+        const text = `Hello ${patient.name}, Dr. ${doctorName} is requesting access to your medical records. Your OTP is ${otp}. This OTP is valid for 5 minutes.`;
+        const html = `
+            <div style="font-family: sans-serif; padding: 20px; border: 1px solid #e2e8f0; border-radius: 12px; max-width: 600px; margin: auto;">
+                <h2 style="color: #2563eb;">Medical Access Request</h2>
+                <p>Hello <strong>${patient.name}</strong>,</p>
+                <p>Dr. <strong>${doctorName}</strong> (${doctorEmail}) is requesting temporary access to view your medical dashboard on CareGrid AI.</p>
+                <div style="background: #f1f5f9; padding: 15px; border-radius: 8px; text-align: center; margin: 20px 0;">
+                    <span style="font-size: 24px; font-weight: bold; letter-spacing: 5px; color: #1e293b;">${otp}</span>
+                </div>
+                <p style="color: #64748b; font-size: 14px;">This OTP will expire in 5 minutes. If you did not request this, please ignore this email.</p>
+            </div>
+        `;
+
+        await sendEmail(patient.email, subject, text, html);
+        res.json({ msg: 'OTP sent to patient email' });
+    } catch (err) {
+        console.error('Doctor Login Init Error:', err);
+        res.status(500).json({ msg: 'Server error' });
+    }
+};
+
+// @desc    Verify Doctor OTP and Login
+// @route   POST /api/auth/doctor-login-verify
+exports.verifyDoctorOTP = async (req, res) => {
+    const { doctorEmail, patientEmail, otp } = req.body;
+    try {
+        const otpRecord = await DoctorOTP.findOne({
+            doctorEmail: doctorEmail.toLowerCase(),
+            patientEmail: patientEmail.toLowerCase(),
+            otp
+        });
+
+        if (!otpRecord) {
+            return res.status(400).json({ msg: 'Invalid or expired OTP' });
+        }
+
+        const patient = await User.findOne({ email: patientEmail.toLowerCase() });
+        const secret = process.env.JWT_SECRET || 'caregrid_default_secret_key_2026';
+
+        const payload = {
+            user: {
+                id: patient.id,
+                role: 'doctor',
+                doctorName: otpRecord.doctorName,
+                doctorEmail: otpRecord.doctorEmail,
+                isTemporary: true
+            }
+        };
+
+        jwt.sign(payload, secret, { expiresIn: '30m' }, async (err, token) => {
+            if (err) throw err;
+            await DoctorOTP.findByIdAndDelete(otpRecord._id);
+            res.json({
+                token,
+                user: {
+                    id: patient.id,
+                    name: `Dr. ${otpRecord.doctorName}`,
+                    email: otpRecord.doctorEmail,
+                    role: 'doctor',
+                    patientName: patient.name,
+                    expiresAt: Date.now() + 30 * 60 * 1000
+                }
+            });
+        });
+    } catch (err) {
+        console.error('Doctor OTP Verify Error:', err);
+        res.status(500).json({ msg: 'Server error' });
     }
 };
