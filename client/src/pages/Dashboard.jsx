@@ -899,69 +899,90 @@ const Dashboard = () => {
                             )}
                         </div>
 
+
                         <div className={clsx(
                             "space-y-4 relative",
                             !isEditingPastEmergencies && "pl-4 border-l-2",
                             isDarkMode ? "border-slate-700" : "border-slate-100"
                         )}>
-                            {formData.pastEmergencies?.length > 0 ? (
-                                formData.pastEmergencies.map((emergency, i) => (
-                                    <div key={emergency.id || i} className="relative">
-                                        {isEditingPastEmergencies ? (
-                                            <div className={clsx(
-                                                "p-3 rounded-xl border space-y-2",
-                                                isDarkMode ? "bg-slate-700/50 border-slate-600" : "bg-slate-50 border-slate-100"
-                                            )}>
-                                                <div className="flex gap-2">
-                                                    <input
-                                                        type="date"
-                                                        value={emergency.date}
-                                                        onChange={(e) => handlePastEmergencyChange(i, 'date', e.target.value)}
-                                                        className={clsx("flex-1 p-2 text-sm rounded border", isDarkMode ? "bg-slate-600 border-slate-500 text-white" : "bg-white border-slate-200")}
-                                                    />
-                                                    <button onClick={() => handleRemovePastEmergency(i)} className="text-red-500 p-1"><Trash2 className="w-4 h-4" /></button>
-                                                </div>
-                                                <input
-                                                    placeholder={t('dashboard.eventTitle')}
-                                                    value={emergency.title}
-                                                    onChange={(e) => handlePastEmergencyChange(i, 'title', e.target.value)}
-                                                    className={clsx("w-full p-2 text-sm rounded border", isDarkMode ? "bg-slate-600 border-slate-500 text-white" : "bg-white border-slate-200")}
-                                                />
-                                                <input
-                                                    placeholder={t('dashboard.location')}
-                                                    value={emergency.location}
-                                                    onChange={(e) => handlePastEmergencyChange(i, 'location', e.target.value)}
-                                                    className={clsx("w-full p-2 text-sm rounded border", isDarkMode ? "bg-slate-600 border-slate-500 text-white" : "bg-white border-slate-200")}
-                                                />
-                                                <select
-                                                    value={emergency.status}
-                                                    onChange={(e) => handlePastEmergencyChange(i, 'status', e.target.value)}
-                                                    className={clsx("w-full p-2 text-sm rounded border", isDarkMode ? "bg-slate-600 border-slate-500 text-white" : "bg-white border-slate-200")}
-                                                >
-                                                    <option value="discharged">Discharged</option>
-                                                    <option value="complete">Complete</option>
-                                                    <option value="ongoing">Ongoing</option>
-                                                </select>
-                                            </div>
-                                        ) : (
-                                            <>
+                            {/* Combined History Display */}
+                            {(() => {
+                                // Map API history to display format
+                                const automatedHistory = emergencyHistory.map(item => ({
+                                    id: item._id,
+                                    date: new Date(item.createdAt).toISOString().split('T')[0],
+                                    title: `SOS Alert - ${item.decisionTrace?.finalDecision?.severity || 'Emergency'}`,
+                                    location: item.location?.address || 'Unknown Location',
+                                    status: item.status,
+                                    isAutomated: true
+                                }));
+
+                                const manualHistory = formData.pastEmergencies || [];
+                                const combinedHistory = [...manualHistory, ...automatedHistory].sort((a, b) => new Date(b.date) - new Date(a.date));
+
+                                if (combinedHistory.length > 0) {
+                                    return combinedHistory.map((emergency, i) => (
+                                        <div key={emergency.id || i} className="relative">
+                                            {isEditingPastEmergencies && !emergency.isAutomated ? (
                                                 <div className={clsx(
-                                                    "absolute -left-[21px] top-1 w-3 h-3 rounded-full ring-4",
-                                                    getStatusColor(emergency.status),
-                                                    isDarkMode ? "ring-slate-800" : "ring-white"
-                                                )}></div>
-                                                <p className="text-sm text-slate-500 mb-1">{emergency.date}</p>
-                                                <p className={clsx("font-semibold", isDarkMode ? "text-slate-200" : "text-slate-800")}>{emergency.title}</p>
-                                                <p className="text-xs text-slate-500">{emergency.location} • {emergency.status}</p>
-                                            </>
-                                        )}
-                                    </div>
-                                ))
-                            ) : (
-                                !isEditingPastEmergencies && (
-                                    <p className="text-center text-sm text-slate-500 py-4">{t('dashboard.noEmergencies')}</p>
-                                )
-                            )}
+                                                    "p-3 rounded-xl border space-y-2",
+                                                    isDarkMode ? "bg-slate-700/50 border-slate-600" : "bg-slate-50 border-slate-100"
+                                                )}>
+                                                    <div className="flex gap-2">
+                                                        <input
+                                                            type="date"
+                                                            value={emergency.date}
+                                                            onChange={(e) => handlePastEmergencyChange(i, 'date', e.target.value)}
+                                                            className={clsx("flex-1 p-2 text-sm rounded border", isDarkMode ? "bg-slate-600 border-slate-500 text-white" : "bg-white border-slate-200")}
+                                                        />
+                                                        <button onClick={() => handleRemovePastEmergency(i)} className="text-red-500 p-1"><Trash2 className="w-4 h-4" /></button>
+                                                    </div>
+                                                    <input
+                                                        placeholder={t('dashboard.eventTitle')}
+                                                        value={emergency.title}
+                                                        onChange={(e) => handlePastEmergencyChange(i, 'title', e.target.value)}
+                                                        className={clsx("w-full p-2 text-sm rounded border", isDarkMode ? "bg-slate-600 border-slate-500 text-white" : "bg-white border-slate-200")}
+                                                    />
+                                                    <input
+                                                        placeholder={t('dashboard.location')}
+                                                        value={emergency.location}
+                                                        onChange={(e) => handlePastEmergencyChange(i, 'location', e.target.value)}
+                                                        className={clsx("w-full p-2 text-sm rounded border", isDarkMode ? "bg-slate-600 border-slate-500 text-white" : "bg-white border-slate-200")}
+                                                    />
+                                                    <select
+                                                        value={emergency.status}
+                                                        onChange={(e) => handlePastEmergencyChange(i, 'status', e.target.value)}
+                                                        className={clsx("w-full p-2 text-sm rounded border", isDarkMode ? "bg-slate-600 border-slate-500 text-white" : "bg-white border-slate-200")}
+                                                    >
+                                                        <option value="discharged">Discharged</option>
+                                                        <option value="complete">Complete</option>
+                                                        <option value="ongoing">Ongoing</option>
+                                                    </select>
+                                                </div>
+                                            ) : (
+                                                <>
+                                                    <div className={clsx(
+                                                        "absolute -left-[21px] top-1 w-3 h-3 rounded-full ring-4",
+                                                        getStatusColor(emergency.status),
+                                                        isDarkMode ? "ring-slate-800" : "ring-white"
+                                                    )}></div>
+                                                    <p className="text-sm text-slate-500 mb-1">
+                                                        {emergency.date}
+                                                        {emergency.isAutomated && <span className="ml-2 text-[10px] bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded-full uppercase font-bold tracking-wider">System</span>}
+                                                    </p>
+                                                    <p className={clsx("font-semibold", isDarkMode ? "text-slate-200" : "text-slate-800")}>{emergency.title}</p>
+                                                    <p className="text-xs text-slate-500">{emergency.location} • <span className="capitalize">{emergency.status}</span></p>
+                                                </>
+                                            )}
+                                        </div>
+                                    ));
+                                } else {
+                                    return !isEditingPastEmergencies && (
+                                        <p className="text-center text-sm text-slate-500 py-4">{t('dashboard.noEmergencies')}</p>
+                                    );
+                                }
+                            })()}
+
 
                             {isEditingPastEmergencies && (
                                 <button

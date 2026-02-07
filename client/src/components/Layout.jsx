@@ -53,7 +53,7 @@ const Layout = ({ children }) => {
                 theme === 'dark' ? 'bg-slate-800/80 border-b border-slate-700' : 'bg-white/80'
             )}>
                 <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
+                    <div className="w-8 h-8 bg-primary-600 rounded-lg flex items-center justify-center">
                         <Activity className="text-white w-5 h-5" />
                     </div>
                     <span className={clsx("font-bold text-xl", theme === 'dark' ? 'text-white' : 'text-slate-800')}>CareGrid</span>
@@ -76,10 +76,10 @@ const Layout = ({ children }) => {
                 )}>
                     <div className="p-6 flex items-center justify-between">
                         <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-200">
+                            <div className="w-10 h-10 bg-primary-600 rounded-xl flex items-center justify-center shadow-lg shadow-primary-200">
                                 <Activity className="text-white w-6 h-6" />
                             </div>
-                            <span className={clsx("font-bold text-2xl tracking-tight", theme === 'dark' ? 'text-white' : 'text-slate-800')}>CareGrid<span className="text-blue-600">AI</span></span>
+                            <span className={clsx("font-bold text-2xl tracking-tight", theme === 'dark' ? 'text-white' : 'text-slate-800')}>CareGrid<span className="text-primary-600">AI</span></span>
                         </div>
                     </div>
 
@@ -101,7 +101,7 @@ const Layout = ({ children }) => {
                                 className={clsx(
                                     'flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200',
                                     location.pathname === item.path
-                                        ? (theme === 'dark' ? 'bg-blue-900/40 text-blue-400 shadow-sm' : 'bg-blue-50 text-blue-700 font-medium shadow-sm')
+                                        ? (theme === 'dark' ? 'bg-primary-900/40 text-primary-400 shadow-sm' : 'bg-primary-50 text-primary-700 font-medium shadow-sm')
                                         : (theme === 'dark' ? 'text-slate-400 hover:bg-slate-700 hover:text-white' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'),
                                     item.className
                                 )}
@@ -170,7 +170,7 @@ const Layout = ({ children }) => {
                                     className={clsx(
                                         'flex items-center gap-4 px-4 py-4 rounded-xl text-lg font-medium border transition-colors',
                                         location.pathname === item.path
-                                            ? (theme === 'dark' ? 'bg-blue-900/40 text-blue-400 border-blue-800' : 'bg-blue-50 text-blue-600 border-blue-100')
+                                            ? (theme === 'dark' ? 'bg-primary-900/40 text-primary-400 border-primary-800' : 'bg-primary-50 text-primary-600 border-primary-100')
                                             : (theme === 'dark' ? 'text-slate-300 bg-slate-800 border-slate-700' : 'text-slate-600 bg-white border-slate-100')
                                     )}
                                 >

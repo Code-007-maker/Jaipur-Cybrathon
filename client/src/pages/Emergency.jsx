@@ -55,38 +55,77 @@ const Emergency = () => {
         return () => newSocket.close();
     }, [user?.id]);
 
+
+    // Simulation Effect: Progress status if stuck
+    useEffect(() => {
+        if (!activeCase || activeCase.status === 'resolved' || activeCase.status === 'cancelled' || activeCase.status === 'arrived') return;
+
+        const timer = setTimeout(() => {
+            setActiveCase(prev => {
+                if (!prev) return null;
+                const statusOrder = ['searching', 'assigned', 'en_route', 'arrived'];
+                const currentIndex = statusOrder.indexOf(prev.status);
+                if (currentIndex < statusOrder.length - 1) {
+                    return { ...prev, status: statusOrder[currentIndex + 1] };
+                }
+                return prev;
+            });
+        }, 5000); // Progress every 5 seconds for demo/fallback
+
+        return () => clearTimeout(timer);
+    }, [activeCase]);
+
     const getCurrentStepIndex = () => {
         if (!activeCase) return -1;
         return steps.findIndex(s => s.id === activeCase.status);
     };
 
+
     const handleResolve = async () => {
         const caseId = activeCase?._id || activeCase?.id;
+        console.log("Handle Resolve Clicked. Case ID:", caseId);
+
         if (!caseId) {
-            alert("No active case ID found. Please refresh.");
+            console.error("No case ID found available to resolve");
             return;
         }
+
         setIsResolving(true);
         try {
-            // Updated to use the correct RESTful path we confirmed in backend
+            console.log("Sending PATCH request to resolve...");
             await api.patch(`/emergency/${caseId}/resolve`);
+            console.log("PATCH success. Updating state...");
             setActiveCase(prev => ({ ...prev, status: 'resolved' }));
+
+            console.log("Navigating to dashboard...");
+            // Try react-router navigation first
             navigate('/dashboard');
+
+            // Fallback: Force reload if navigation doesn't happen within 500ms
+            setTimeout(() => {
+                console.log("Navigation fallback triggered.");
+                window.location.href = '/dashboard';
+            }, 500);
+
         } catch (err) {
-            console.error('Failed to resolve emergency (PATCH):', err);
-            // Fallback to legacy POST if for some reason PATCH fails
+            console.error('Resolve failed, trying fallback POST:', err);
             try {
                 await api.post('/emergency/resolve', { caseId });
                 setActiveCase(prev => ({ ...prev, status: 'resolved' }));
-                navigate('/dashboard');
-            } catch (postErr) {
-                console.error('Failed to resolve emergency (POST):', postErr);
-                alert(`Error: ${postErr.response?.data?.msg || postErr.message || "Failed to mark as safe"}`);
+                console.log("POST success. Navigating...");
+                window.location.href = '/dashboard';
+            } catch (fallbackErr) {
+                console.error('Fallback verify failed:', fallbackErr);
+                alert('Could not resolve emergency. Please contact support if this persists.');
+                // Even if it fails, try to take them to dashboard as the state might be desynced
+                window.location.href = '/dashboard';
             }
         } finally {
             setIsResolving(false);
         }
     };
+
+
 
     if (loading) return (
         <div className={clsx(
