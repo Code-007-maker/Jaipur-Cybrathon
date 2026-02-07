@@ -1,6 +1,7 @@
 const EmergencyCase = require('../models/EmergencyCase');
 const User = require('../models/User');
 const { sendEmail } = require('../utils/mailer');
+const { GoogleGenerativeAI } = require('@google/generative-ai');
 
 // @desc    Trigger SOS
 // @route   POST /api/emergency
@@ -37,6 +38,10 @@ exports.createSOS = async (req, res) => {
         newCase.decisionTrace = generateDecisionTrace(triageData, user, severity);
 
         await newCase.save();
+
+        // 🟢 TRIGGER AI ENHANCEMENT (Non-blocking)
+        // Runs in background to update reasoning and emit via socket
+        enhanceTraceWithAI(newCase._id, triageData, io).catch(err => console.error("AI trigger failed:", err));
 
         // Run notifications and responder assignment in the background
         (async () => {
@@ -248,8 +253,67 @@ async function updateStatus(caseId, status, eta, io) {
     io.emit(`emergency_update_${emergency.user}`, emergency);
 }
 
+// Helper to enhance the decision trace with Generative AI (Background Process)
+async function enhanceTraceWithAI(emergencyId, triageData, io) {
+    try {
+        const emergency = await EmergencyCase.findById(emergencyId);
+        if (!emergency) return;
+
+        // Configuration for Gemini
+        const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+
+        // Construct Prompt
+        const symptoms = triageData?.symptoms ? (Array.isArray(triageData.symptoms) ? triageData.symptoms.join(', ') : triageData.symptoms) : "Emergency SOS triggered";
+        const vitals = triageData?.vitals ? JSON.stringify(triageData.vitals) : "Not available";
+        const history = `Allergies: ${emergency.user?.allergies?.length || 0}, Chronic: ${emergency.user?.chronicConditions?.length || 0}`;
+
+        const prompt = `
+        Acting as a Medical AI Decision Support System, explain why this emergency was classified as ${emergency.severity || 'High'} risk.
+        
+        Input Data:
+        - Symptoms: ${symptoms}
+        - Vitals: ${vitals}
+        - Patient History Flags: ${history}
+        - Rules Triggered: ${JSON.stringify(emergency.decisionTrace.rulesTriggered || [])}
+
+        Output JSON strictly:
+        {
+            "reasoning": "1-2 sentence medical explanation for the decision, clear and professional.",
+            "confidence": <number 0-100>,
+            "uncertainty": "Note any missing data that lowers confidence (or null if none)"
+        }
+        `;
+
+        const result = await model.generateContent(prompt);
+        const response = await result.response;
+        const text = response.text();
+
+        // Parse JSON safely
+        const jsonMatch = text.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+            const analysis = JSON.parse(jsonMatch[0]);
+
+            // Update the record
+            emergency.decisionTrace.aiReasoning = analysis.reasoning;
+            emergency.decisionTrace.confidence = analysis.confidence;
+            if (analysis.uncertainty) {
+                emergency.decisionTrace.uncertainty = analysis.uncertainty;
+            }
+
+            await emergency.save();
+
+            // Real-time update to frontend
+            io.emit(`emergency_update_${emergency.user}`, emergency);
+        }
+    } catch (err) {
+        console.error("AI Trace Enhancement Failed:", err.message);
+        // Fallback is already in place (template reasoning) so we just log failure
+    }
+}
+
 /**
- * Helper to generate a structured decision trace for an emergency
+ * Helper to generate a structured decision trace for an emergency (Initial Template)
  */
 function generateDecisionTrace(triageData, user, requestedSeverity) {
     const trace = {
@@ -259,13 +323,14 @@ function generateDecisionTrace(triageData, user, requestedSeverity) {
             historyFlags: []
         },
         rulesTriggered: [],
-        aiReasoning: "",
+        aiReasoning: "Initializing AI analysis...", // Placeholder while AI runs
         confidence: triageData?.confidence || 85,
         uncertainty: "",
         finalDecision: {
             severity: triageData?.severity || requestedSeverity || "High",
             category: triageData?.recommendedSpecialty || "General Emergency"
-        }
+        },
+        disclaimer: "AI-assisted decision support. Not a medical diagnosis."
     };
 
     // Add history flags if available
@@ -291,17 +356,24 @@ function generateDecisionTrace(triageData, user, requestedSeverity) {
         trace.rulesTriggered.push({ ruleName: "Direct SOS Activation", reason: "SOS triggered directly by user." });
     }
 
-    // AI Reasoning
+    // Initial Deterministic Reasoning (Detailed Fallback/Pre-AI)
     if (triageData) {
-        trace.aiReasoning = `The system analyzed the reported symptoms (${trace.inputEvidence.symptoms.slice(0, 2).join(', ')}) and vitals. The combination suggests a ${trace.finalDecision.severity} risk level requiring specialized ${trace.finalDecision.category} attention.`;
-    } else {
-        trace.aiReasoning = "SOS triggered without prior triage assessment. System assumes high-risk status due to manual distress signal activation.";
-        trace.uncertainty = "High uncertainty: No detailed symptom data provided prior to SOS.";
-    }
+        // Construct a sentence based on rules
+        let reasoning = `System flagged this as ${trace.finalDecision.severity} priority. `;
 
-    // Recommended human judgment if confidence is low
-    if (trace.confidence < 80) {
-        trace.uncertainty += " AI confidence is moderate. Human medical assessment is strongly advised.";
+        if (trace.rulesTriggered.length > 0) {
+            const ruleNames = trace.rulesTriggered.map(r => r.ruleName.replace(' Rule', '')).join(' and ');
+            reasoning += `Detected risk factors: ${ruleNames}. `;
+        }
+
+        if (trace.inputEvidence.vitals.oxygen !== "N/A" && parseInt(trace.inputEvidence.vitals.oxygen) < 94) {
+            reasoning += `SpO2 level of ${trace.inputEvidence.vitals.oxygen}% indicates potential respiratory compromise. `;
+        }
+
+        trace.aiReasoning = reasoning + "AI verifying specifics...";
+    } else {
+        trace.aiReasoning = "Emergency SOS triggered manually. System mandates High priority response for direct distress signals until vitals are assessed.";
+        trace.uncertainty = "High: Missing triage data.";
     }
 
     return trace;
