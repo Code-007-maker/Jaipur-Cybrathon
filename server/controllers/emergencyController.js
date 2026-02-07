@@ -5,7 +5,7 @@ const { sendEmail } = require('../utils/mailer');
 // @desc    Trigger SOS
 // @route   POST /api/emergency
 exports.createSOS = async (req, res) => {
-    const { location, severity } = req.body;
+    const { location, severity, triageData } = req.body;
     const io = req.app.get('io');
 
     try {
@@ -32,6 +32,9 @@ exports.createSOS = async (req, res) => {
                 status: 'Sent'
             }));
         }
+
+        // Generate Decision Trace
+        newCase.decisionTrace = generateDecisionTrace(triageData, user, severity);
 
         await newCase.save();
 
@@ -162,12 +165,25 @@ exports.cancelSOS = async (req, res) => {
 // @desc    Resolve SOS (Mark as complete)
 // @route   POST /api/emergency/resolve
 exports.resolveSOS = async (req, res) => {
-    const { caseId } = req.body;
+    const caseId = req.params.id || req.body.caseId;
+    console.log(`[Emergency] Attempting to resolve case: ${caseId}`);
+
     try {
+        if (!caseId) {
+            console.error('[Emergency] No case ID provided for resolution');
+            return res.status(400).json({ msg: 'Case ID is required' });
+        }
+
         const emergency = await EmergencyCase.findById(caseId);
-        if (!emergency) return res.status(404).json({ msg: 'Case not found' });
+        if (!emergency) {
+            console.error(`[Emergency] Case NOT found: ${caseId}`);
+            return res.status(404).json({ msg: 'Case not found' });
+        }
+
+        console.log(`[Emergency] Found case for user: ${emergency.user}. req.user.id: ${req.user.id}`);
 
         if (emergency.user.toString() !== req.user.id) {
+            console.error(`[Emergency] Authorization mismatch. Case user: ${emergency.user}, Request user: ${req.user.id}`);
             return res.status(401).json({ msg: 'Not authorized' });
         }
 
@@ -175,9 +191,10 @@ exports.resolveSOS = async (req, res) => {
         emergency.timeline.push({ status: 'resolved' });
         await emergency.save();
 
+        console.log(`[Emergency] Case ${caseId} resolved successfully`);
         res.json(emergency);
     } catch (err) {
-        console.error(err.message);
+        console.error(`[Emergency] Resolve error for case ${caseId}:`, err);
         res.status(500).send('Server Error');
     }
 };
@@ -186,7 +203,7 @@ exports.resolveSOS = async (req, res) => {
 async function assignResponder(caseId, io) {
     try {
         const emergency = await EmergencyCase.findById(caseId);
-        if (!emergency || emergency.status === 'cancelled') return;
+        if (!emergency || emergency.status === 'cancelled' || emergency.status === 'resolved') return;
 
         emergency.status = 'assigned';
         emergency.assignedResponder = {
@@ -221,7 +238,7 @@ async function assignResponder(caseId, io) {
 
 async function updateStatus(caseId, status, eta, io) {
     const emergency = await EmergencyCase.findById(caseId);
-    if (!emergency || emergency.status === 'cancelled') return;
+    if (!emergency || emergency.status === 'cancelled' || emergency.status === 'resolved') return;
 
     emergency.status = status;
     if (eta) emergency.assignedResponder.eta = eta;
@@ -229,4 +246,63 @@ async function updateStatus(caseId, status, eta, io) {
     await emergency.save();
 
     io.emit(`emergency_update_${emergency.user}`, emergency);
+}
+
+/**
+ * Helper to generate a structured decision trace for an emergency
+ */
+function generateDecisionTrace(triageData, user, requestedSeverity) {
+    const trace = {
+        inputEvidence: {
+            symptoms: triageData?.symptoms ? (Array.isArray(triageData.symptoms) ? triageData.symptoms : triageData.symptoms.split(', ')) : ["Emergency SOS triggered"],
+            vitals: triageData?.vitals || { heartRate: "N/A", temperature: "N/A", oxygen: "N/A" },
+            historyFlags: []
+        },
+        rulesTriggered: [],
+        aiReasoning: "",
+        confidence: triageData?.confidence || 85,
+        uncertainty: "",
+        finalDecision: {
+            severity: triageData?.severity || requestedSeverity || "High",
+            category: triageData?.recommendedSpecialty || "General Emergency"
+        }
+    };
+
+    // Add history flags if available
+    if (user?.allergies?.length > 0) trace.inputEvidence.historyFlags.push(`${user.allergies.length} Allergies`);
+    if (user?.chronicConditions?.length > 0) trace.inputEvidence.historyFlags.push(`${user.chronicConditions.length} Chronic Conditions`);
+
+    // Add deterministic rules based on data
+    const oxygen = triageData?.vitals?.oxygen ? parseInt(triageData.vitals.oxygen) : null;
+    if (oxygen && oxygen < 92) {
+        trace.rulesTriggered.push({ ruleName: "Critical Hypoxia Rule", reason: "Oxygen saturation below 92% detected." });
+    }
+
+    const symptomsText = triageData?.symptoms?.toString().toLowerCase() || "";
+    if (symptomsText.includes("chest pain") || symptomsText.includes("heart")) {
+        trace.rulesTriggered.push({ ruleName: "Cardiac Risk Rule", reason: "Symptoms indicate potential heart-related emergency." });
+    }
+
+    if (symptomsText.includes("breath") || symptomsText.includes("breathing")) {
+        trace.rulesTriggered.push({ ruleName: "Respiratory Distress Rule", reason: "Patient reporting difficulty breathing." });
+    }
+
+    if (trace.rulesTriggered.length === 0) {
+        trace.rulesTriggered.push({ ruleName: "Direct SOS Activation", reason: "SOS triggered directly by user." });
+    }
+
+    // AI Reasoning
+    if (triageData) {
+        trace.aiReasoning = `The system analyzed the reported symptoms (${trace.inputEvidence.symptoms.slice(0, 2).join(', ')}) and vitals. The combination suggests a ${trace.finalDecision.severity} risk level requiring specialized ${trace.finalDecision.category} attention.`;
+    } else {
+        trace.aiReasoning = "SOS triggered without prior triage assessment. System assumes high-risk status due to manual distress signal activation.";
+        trace.uncertainty = "High uncertainty: No detailed symptom data provided prior to SOS.";
+    }
+
+    // Recommended human judgment if confidence is low
+    if (trace.confidence < 80) {
+        trace.uncertainty += " AI confidence is moderate. Human medical assessment is strongly advised.";
+    }
+
+    return trace;
 }

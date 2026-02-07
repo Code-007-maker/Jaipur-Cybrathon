@@ -47,6 +47,12 @@ const Triage = () => {
                 vitals
             });
             setResult(res.data);
+            // Store triage context for global SOS button
+            sessionStorage.setItem('lastTriageResult', JSON.stringify({
+                ...res.data,
+                symptoms: combinedSymptoms,
+                vitals
+            }));
             setStep(3);
         } catch (err) {
             console.error(err);
@@ -68,15 +74,15 @@ const Triage = () => {
     return (
         <div className="max-w-3xl mx-auto space-y-6">
             <header className="mb-8">
-                <h1 className="text-3xl font-bold text-slate-900">{t('triage.title')}</h1>
-                <p className="text-slate-500">{t('triage.subtitle')}</p>
+                <h1 className={clsx("text-3xl font-bold", isDarkMode ? "text-white" : "text-slate-900")}>{t('triage.title')}</h1>
+                <p className={clsx(isDarkMode ? "text-slate-400" : "text-slate-500")}>{t('triage.subtitle')}</p>
             </header>
 
             {loading ? (
                 <div className="flex flex-col items-center justify-center p-20">
                     <Loader2 className="w-16 h-16 text-blue-600 animate-spin mb-4" />
-                    <h3 className="text-xl font-bold text-slate-800">{t('triage.analyzing')}</h3>
-                    <p className="text-slate-500">{t('triage.consultingAI')}</p>
+                    <h3 className={clsx("text-xl font-bold", isDarkMode ? "text-white" : "text-slate-800")}>{t('triage.analyzing')}</h3>
+                    <p className={clsx(isDarkMode ? "text-slate-400" : "text-slate-500")}>{t('triage.consultingAI')}</p>
                 </div>
             ) : step === 3 && result ? (
                 <motion.div
@@ -95,8 +101,11 @@ const Triage = () => {
                         <p className="text-lg font-medium opacity-90">{result.recommendedAction}</p>
                     </div>
 
-                    <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm">
-                        <h3 className="text-xl font-bold text-slate-900 mb-4">{t('triage.possibleCauses')}</h3>
+                    <div className={clsx(
+                        "p-6 rounded-3xl border shadow-sm",
+                        isDarkMode ? "bg-slate-800 border-slate-700" : "bg-white border-slate-100"
+                    )}>
+                        <h3 className={clsx("text-xl font-bold mb-4", isDarkMode ? "text-white" : "text-slate-900")}>{t('triage.possibleCauses')}</h3>
                         <div className="flex flex-wrap gap-2 mb-6">
                             {result.possibleCauses?.map((cause, i) => (
                                 <span key={i} className={clsx(
@@ -153,16 +162,20 @@ const Triage = () => {
                     {step === 1 ? (
                         <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-6">
                             <div>
-                                <label className="block text-lg font-bold text-slate-900 mb-4">{t('triage.commonSymptoms')}</label>
+                                <label className={clsx("block text-lg font-bold mb-4", isDarkMode ? "text-white" : "text-slate-900")}>{t('triage.commonSymptoms')}</label>
                                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                                     {commonSymptoms.map(sym => (
                                         <button
                                             key={sym.key}
                                             onClick={() => toggleSymptom(sym.label)}
-                                            className={`p-3 rounded-xl border text-sm font-medium transition-all ${selectedCommon.includes(sym.label)
-                                                ? 'bg-blue-600 text-white border-blue-600 shadow-md transform scale-105'
-                                                : 'bg-white text-slate-600 border-slate-200 hover:border-blue-300'
-                                                }`}
+                                            className={clsx(
+                                                "p-3 rounded-xl border text-sm font-medium transition-all",
+                                                selectedCommon.includes(sym.label)
+                                                    ? 'bg-blue-600 text-white border-blue-600 shadow-md transform scale-105'
+                                                    : isDarkMode
+                                                        ? 'bg-slate-700 text-slate-300 border-slate-600 hover:border-blue-500'
+                                                        : 'bg-white text-slate-600 border-slate-200 hover:border-blue-300'
+                                            )}
                                         >
                                             {sym.label}
                                         </button>
@@ -171,9 +184,14 @@ const Triage = () => {
                             </div>
 
                             <div>
-                                <label className="block text-lg font-bold text-slate-900 mb-2">{t('triage.anythingElse')}</label>
+                                <label className={clsx("block text-lg font-bold mb-2", isDarkMode ? "text-white" : "text-slate-900")}>{t('triage.anythingElse')}</label>
                                 <textarea
-                                    className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 h-32"
+                                    className={clsx(
+                                        "w-full px-4 py-3 rounded-xl border focus:outline-none focus:ring-2 focus:ring-blue-500 h-32",
+                                        isDarkMode
+                                            ? "bg-slate-700 border-slate-600 text-white placeholder-slate-400"
+                                            : "bg-slate-50 border-slate-200 text-slate-900"
+                                    )}
                                     placeholder={t('triage.describePlaceholder')}
                                     value={symptoms}
                                     onChange={(e) => setSymptoms(e.target.value)}
@@ -190,12 +208,12 @@ const Triage = () => {
                         </motion.div>
                     ) : (
                         <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-6">
-                            <h2 className="text-2xl font-bold text-slate-900">{t('triage.addVitals')}</h2>
-                            <p className="text-slate-500">{t('triage.vitalsHelp')}</p>
+                            <h2 className={clsx("text-2xl font-bold", isDarkMode ? "text-white" : "text-slate-900")}>{t('triage.addVitals')}</h2>
+                            <p className={clsx(isDarkMode ? "text-slate-400" : "text-slate-500")}>{t('triage.vitalsHelp')}</p>
 
                             <div className="grid md:grid-cols-3 gap-4">
                                 <div>
-                                    <label className="block text-sm font-medium text-slate-700 mb-1 flex items-center gap-2">
+                                    <label className={clsx("block text-sm font-medium mb-1 flex items-center gap-2", isDarkMode ? "text-slate-300" : "text-slate-700")}>
                                         <Heart className="w-4 h-4 text-red-500" /> {t('triage.heartRate')}
                                     </label>
                                     <input
@@ -212,7 +230,7 @@ const Triage = () => {
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-slate-700 mb-1 flex items-center gap-2">
+                                    <label className={clsx("block text-sm font-medium mb-1 flex items-center gap-2", isDarkMode ? "text-slate-300" : "text-slate-700")}>
                                         <Thermometer className="w-4 h-4 text-orange-500" /> {t('triage.temperature')}
                                     </label>
                                     <input
@@ -229,7 +247,7 @@ const Triage = () => {
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-slate-700 mb-1 flex items-center gap-2">
+                                    <label className={clsx("block text-sm font-medium mb-1 flex items-center gap-2", isDarkMode ? "text-slate-300" : "text-slate-700")}>
                                         <Wind className="w-4 h-4 text-blue-500" /> {t('triage.spo2')}
                                     </label>
                                     <input

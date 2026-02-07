@@ -42,7 +42,19 @@ const SOSButton = () => {
             // Function to post SOS and navigate
             const performSOS = async (loc) => {
                 try {
-                    await api.post('/emergency', { location: loc, severity: 'Critical' });
+                    // Try to get recent triage context for Decision Trace
+                    const lastTriage = sessionStorage.getItem('lastTriageResult');
+                    const triageData = lastTriage ? JSON.parse(lastTriage) : null;
+
+                    await api.post('/emergency', {
+                        location: loc,
+                        severity: triageData?.severity || 'Critical',
+                        triageData: triageData
+                    });
+
+                    // Clear after SOS
+                    sessionStorage.removeItem('lastTriageResult');
+
                     setIsActive(false);
                     setIsSending(false);
                     navigate('/emergency');

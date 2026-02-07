@@ -35,6 +35,31 @@ const EmergencyCaseSchema = new mongoose.Schema({
             timestamp: { type: Date, default: Date.now }
         }
     ],
+    decisionTrace: {
+        inputEvidence: {
+            symptoms: [String],
+            vitals: {
+                heartRate: String,
+                temperature: String,
+                oxygen: String
+            },
+            historyFlags: [String]
+        },
+        rulesTriggered: [
+            {
+                ruleName: String,
+                reason: String
+            }
+        ],
+        aiReasoning: String,
+        confidence: Number,
+        uncertainty: String,
+        finalDecision: {
+            severity: String,
+            category: String
+        },
+        disclaimer: { type: String, default: "AI-assisted decision support. Not a medical diagnosis." }
+    },
     createdAt: { type: Date, default: Date.now }
 });
 
