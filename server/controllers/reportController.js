@@ -347,3 +347,70 @@ function generateMockAnalysis(title, category) {
 
     return analyses[category] || analyses.other;
 }
+
+/**
+ * Add a doctor's note to a report
+ */
+exports.addNote = async (req, res) => {
+    try {
+        console.log('--- Add Note Controller Start ---');
+        console.log('User Role from token:', req.user.role);
+        console.log('Full User object:', JSON.stringify(req.user, null, 2));
+
+        if (req.user.role !== 'doctor') {
+            return res.status(403).json({ msg: 'Only doctors can add notes' });
+        }
+
+        const { content } = req.body;
+        if (!content) {
+            return res.status(400).json({ msg: 'Note content is required' });
+        }
+
+        const report = await HealthReport.findById(req.params.id);
+        if (!report) {
+            return res.status(404).json({ msg: 'Report not found' });
+        }
+
+        // Verify doctor has access to this report (owned by the patient they are viewing)
+        if (report.userId.toString() !== req.user.id) {
+            return res.status(403).json({ msg: 'Unauthorized access to this patient record' });
+        }
+
+        // Determine Doctor Identity with multiple fallbacks
+        let doctorName = req.user.doctorName || req.user.name;
+        let doctorEmail = req.user.doctorEmail || req.user.email;
+
+        // If still missing, try to find a user record for this ID (in case it's a permanent doctor)
+        if (!doctorName || !doctorEmail) {
+            const userInDb = await User.findById(req.user.id);
+            if (userInDb && userInDb.role === 'doctor') {
+                doctorName = `Dr. ${userInDb.name}`;
+                doctorEmail = userInDb.email;
+            }
+        }
+
+        // Final fallbacks to avoid validation error (Mongoose requires these)
+        if (!doctorName) doctorName = 'CareGrid Doctor';
+        if (!doctorEmail) doctorEmail = 'doctor@caregrid.ai';
+
+        const newNote = {
+            doctorName,
+            doctorEmail,
+            content,
+            createdAt: new Date()
+        };
+
+        if (!report.notes) report.notes = [];
+        report.notes.push(newNote);
+        await report.save();
+
+        res.json({
+            msg: 'Note added successfully',
+            notes: report.notes
+        });
+
+    } catch (err) {
+        console.error('Add Note Error:', err);
+        res.status(500).json({ msg: 'Server error', error: err.message });
+    }
+};

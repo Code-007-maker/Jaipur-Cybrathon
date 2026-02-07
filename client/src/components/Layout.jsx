@@ -40,7 +40,7 @@ const Layout = ({ children }) => {
         { name: t('nav.findHospital'), path: '/map', icon: FileText },
         { name: t('nav.aiMedic'), path: '/chat', icon: MessageSquare },
         { name: 'Health Vault', path: '/reports', icon: FolderHeart },
-    ];
+    ].filter(item => user?.role === 'doctor' ? item.path === '/reports' : true);
 
     return (
         <div className={clsx(
@@ -119,7 +119,7 @@ const Layout = ({ children }) => {
                             </div>
                             <div>
                                 <p className={clsx("text-sm font-semibold truncate w-32", theme === 'dark' ? 'text-white' : 'text-slate-800')}>
-                                    {user?.role === 'doctor' ? `Dr. ${user.name.replace('Dr. ', '')}` : user?.name}
+                                    {user?.name}
                                 </p>
                                 <p className="text-xs text-slate-500 dark:text-slate-400">
                                     {user?.role === 'doctor' ? 'Secure Access' : 'Patient ID: #8821'}
@@ -202,7 +202,7 @@ const Layout = ({ children }) => {
                 <div className="p-4 lg:p-8 max-w-7xl mx-auto">
                     {children}
                 </div>
-                {isAuthenticated && <SOSButton />}
+                {isAuthenticated && user?.role !== 'doctor' && <SOSButton />}
             </main>
         </div>
     );

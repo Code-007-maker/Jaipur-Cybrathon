@@ -5,14 +5,16 @@ import { useTheme } from '../context/ThemeContext';
 import {
     Upload, FileText, Trash2, Eye, X, AlertCircle, CheckCircle,
     FileImage, File, Pill, Heart, Activity, Folder, Star,
-    Sparkles, RefreshCw, ExternalLink, Shield
+    Sparkles, RefreshCw, ExternalLink, Shield, MessageCircle
 } from 'lucide-react';
 import clsx from 'clsx';
 import api from '../utils/api';
+import { useAuth } from '../context/AuthContext';
 
 const ReportVault = () => {
     const { t } = useTranslation();
     const { theme } = useTheme();
+    const { user } = useAuth();
     const isDarkMode = theme === 'dark';
     const fileInputRef = useRef(null);
 
@@ -24,6 +26,8 @@ const ReportVault = () => {
     const [showPreview, setShowPreview] = useState(false);
     const [filter, setFilter] = useState('all');
     const [dragOver, setDragOver] = useState(false);
+    const [newNote, setNewNote] = useState('');
+    const [addingNote, setAddingNote] = useState(false);
 
     // Form state for upload
     const [uploadForm, setUploadForm] = useState({
@@ -205,6 +209,26 @@ const ReportVault = () => {
         }
     };
 
+    const handleAddNote = async (reportId) => {
+        if (!newNote.trim()) return;
+        try {
+            setAddingNote(true);
+            const res = await api.post(`/reports/${reportId}/notes`, { content: newNote });
+            setReports(prev => prev.map(r =>
+                r._id === reportId ? { ...r, notes: res.data.notes } : r
+            ));
+            if (selectedReport?._id === reportId) {
+                setSelectedReport(prev => ({ ...prev, notes: res.data.notes }));
+            }
+            setNewNote('');
+        } catch (err) {
+            console.error('Add note error:', err);
+            alert('Failed to add note');
+        } finally {
+            setAddingNote(false);
+        }
+    };
+
     const formatDate = (date) => {
         return new Date(date).toLocaleDateString('en-IN', {
             day: 'numeric',
@@ -215,6 +239,56 @@ const ReportVault = () => {
 
     return (
         <div className="space-y-6">
+            {/* Patient Overview Banner (for Doctors) */}
+            {user?.role === 'doctor' && (
+                <motion.div
+                    initial={{ y: -20, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    className={clsx(
+                        "p-6 rounded-3xl border shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-6 overflow-hidden relative",
+                        isDarkMode ? "bg-slate-800/50 border-blue-500/20 shadow-blue-900/10" : "bg-blue-50 border-blue-100 shadow-blue-100/50"
+                    )}
+                >
+                    <div className="absolute top-0 right-0 p-8 opacity-5">
+                        <Shield className="w-32 h-32" />
+                    </div>
+
+                    <div className="flex items-center gap-5 relative z-10">
+                        <div className="w-16 h-16 rounded-2xl bg-blue-600 flex items-center justify-center text-white shadow-lg shadow-blue-500/40">
+                            <Heart className="w-8 h-8 fill-current" />
+                        </div>
+                        <div>
+                            <span className="text-xs font-bold uppercase tracking-widest text-blue-600 mb-1 block">Patient Overview</span>
+                            <h2 className={clsx("text-2xl font-black", isDarkMode ? "text-white" : "text-slate-900")}>
+                                {user.patientName}
+                            </h2>
+                            <p className="text-sm text-slate-500">Secure Temporary Access Granted</p>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 md:flex md:items-center gap-4 md:gap-8 relative z-10">
+                        <div className="flex flex-col">
+                            <span className="text-[10px] font-bold uppercase text-slate-400">Blood Group</span>
+                            <span className={clsx("text-lg font-black", isDarkMode ? "text-blue-400" : "text-blue-700")}>
+                                {user.bloodGroup || 'Not set'}
+                            </span>
+                        </div>
+                        <div className="flex flex-col border-l border-slate-200 dark:border-slate-700 pl-4 md:pl-8">
+                            <span className="text-[10px] font-bold uppercase text-slate-400">Age</span>
+                            <span className={clsx("text-lg font-black", isDarkMode ? "text-slate-200" : "text-slate-800")}>
+                                {user.age || 'N/A'} yrs
+                            </span>
+                        </div>
+                        <div className="flex flex-col border-l border-slate-200 dark:border-slate-700 pl-4 md:pl-8">
+                            <span className="text-[10px] font-bold uppercase text-slate-400">Status</span>
+                            <span className="px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 text-[10px] font-black w-fit mt-1">
+                                VERIFIED
+                            </span>
+                        </div>
+                    </div>
+                </motion.div>
+            )}
+
             {/* Header */}
             <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
@@ -223,13 +297,15 @@ const ReportVault = () => {
                     </h1>
                     <p className="text-slate-500">Securely store and access your medical reports anytime</p>
                 </div>
-                <button
-                    onClick={() => fileInputRef.current?.click()}
-                    className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-xl font-medium hover:bg-blue-700 transition-colors shadow-lg shadow-blue-500/25"
-                >
-                    <Upload className="w-5 h-5" />
-                    Upload Report
-                </button>
+                {user?.role !== 'doctor' && (
+                    <button
+                        onClick={() => fileInputRef.current?.click()}
+                        className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-xl font-medium hover:bg-blue-700 transition-colors shadow-lg shadow-blue-500/25"
+                    >
+                        <Upload className="w-5 h-5" />
+                        Upload Report
+                    </button>
+                )}
                 <input
                     ref={fileInputRef}
                     type="file"
@@ -275,9 +351,9 @@ const ReportVault = () => {
                         : isDarkMode
                             ? "border-slate-700 hover:border-slate-600"
                             : "border-slate-300 hover:border-slate-400",
-                    reports.length > 0 && "hidden md:block"
+                    (reports.length > 0 || user?.role === 'doctor') && "hidden"
                 )}
-                onClick={() => fileInputRef.current?.click()}
+                onClick={() => user?.role !== 'doctor' && fileInputRef.current?.click()}
             >
                 <div className={clsx(
                     "w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4",
@@ -375,24 +451,28 @@ const ReportVault = () => {
                                         >
                                             <Eye className="w-4 h-4" /> View
                                         </button>
-                                        <button
-                                            onClick={(e) => { e.stopPropagation(); toggleEmergencyRelevant(report._id); }}
-                                            className={clsx(
-                                                "p-2 rounded-lg transition-colors",
-                                                report.isEmergencyRelevant
-                                                    ? "text-red-500 bg-red-50 dark:bg-red-900/20"
-                                                    : "text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20"
-                                            )}
-                                            title="Toggle Emergency Access"
-                                        >
-                                            <Star className={clsx("w-4 h-4", report.isEmergencyRelevant && "fill-current")} />
-                                        </button>
-                                        <button
-                                            onClick={(e) => { e.stopPropagation(); handleDelete(report._id); }}
-                                            className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
-                                        >
-                                            <Trash2 className="w-4 h-4" />
-                                        </button>
+                                        {user?.role !== 'doctor' && (
+                                            <>
+                                                <button
+                                                    onClick={(e) => { e.stopPropagation(); toggleEmergencyRelevant(report._id); }}
+                                                    className={clsx(
+                                                        "p-2 rounded-lg transition-colors",
+                                                        report.isEmergencyRelevant
+                                                            ? "text-red-500 bg-red-50 dark:bg-red-900/20"
+                                                            : "text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20"
+                                                    )}
+                                                    title="Toggle Emergency Access"
+                                                >
+                                                    <Star className={clsx("w-4 h-4", report.isEmergencyRelevant && "fill-current")} />
+                                                </button>
+                                                <button
+                                                    onClick={(e) => { e.stopPropagation(); handleDelete(report._id); }}
+                                                    className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                                                >
+                                                    <Trash2 className="w-4 h-4" />
+                                                </button>
+                                            </>
+                                        )}
                                     </div>
                                 </motion.div>
                             );
@@ -680,30 +760,88 @@ const ReportVault = () => {
                                 </div>
                             </div>
 
-                            {/* Actions */}
-                            <div className="flex gap-3">
-                                <button
-                                    onClick={() => toggleEmergencyRelevant(selectedReport._id)}
-                                    className={clsx(
-                                        "flex-1 py-3 rounded-xl font-medium transition-colors flex items-center justify-center gap-2",
-                                        selectedReport.isEmergencyRelevant
-                                            ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
-                                            : isDarkMode
-                                                ? "bg-slate-700 text-white hover:bg-slate-600"
-                                                : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                            {/* Doctor Notes */}
+                            <div className="mb-6">
+                                <h3 className={clsx("text-lg font-bold mb-4 flex items-center gap-2", isDarkMode ? "text-white" : "text-slate-900")}>
+                                    <MessageCircle className="w-5 h-5 text-blue-500" />
+                                    Doctor Notes
+                                </h3>
+
+                                <div className="space-y-4">
+                                    {selectedReport.notes && selectedReport.notes.length > 0 ? (
+                                        selectedReport.notes.map((note, idx) => (
+                                            <div
+                                                key={idx}
+                                                className={clsx(
+                                                    "p-4 rounded-2xl border",
+                                                    isDarkMode ? "bg-slate-700/50 border-slate-600" : "bg-white border-slate-100 shadow-sm"
+                                                )}
+                                            >
+                                                <div className="flex items-center justify-between mb-2">
+                                                    <span className="font-bold text-sm text-blue-600">{note.doctorName}</span>
+                                                    <span className="text-[10px] text-slate-500">{formatDate(note.createdAt)}</span>
+                                                </div>
+                                                <p className={clsx("text-sm", isDarkMode ? "text-slate-300" : "text-slate-600")}>
+                                                    {note.content}
+                                                </p>
+                                            </div>
+                                        ))
+                                    ) : (
+                                        <p className="text-sm text-slate-500 italic px-2">No notes added yet.</p>
                                     )}
-                                >
-                                    <Star className={clsx("w-4 h-4", selectedReport.isEmergencyRelevant && "fill-current")} />
-                                    {selectedReport.isEmergencyRelevant ? 'Remove from Emergency' : 'Add to Emergency'}
-                                </button>
-                                <button
-                                    onClick={() => { handleDelete(selectedReport._id); }}
-                                    className="px-6 py-3 bg-red-600 text-white rounded-xl font-medium hover:bg-red-700 transition-colors flex items-center gap-2"
-                                >
-                                    <Trash2 className="w-4 h-4" />
-                                    Delete
-                                </button>
+
+                                    {user?.role === 'doctor' && (
+                                        <div className="mt-4 space-y-3">
+                                            <textarea
+                                                value={newNote}
+                                                onChange={(e) => setNewNote(e.target.value)}
+                                                placeholder="Add a medical note for the patient..."
+                                                className={clsx(
+                                                    "w-full px-4 py-3 rounded-xl border min-h-[100px] text-sm transition-colors",
+                                                    isDarkMode
+                                                        ? "bg-slate-700 border-slate-600 text-white placeholder-slate-400"
+                                                        : "bg-white border-slate-200 text-slate-900"
+                                                )}
+                                            />
+                                            <button
+                                                onClick={() => handleAddNote(selectedReport._id)}
+                                                disabled={addingNote || !newNote.trim()}
+                                                className="w-full py-2.5 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                                            >
+                                                {addingNote ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4 rotate-0" />}
+                                                Post Note
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
                             </div>
+
+                            {/* Actions */}
+                            {user?.role !== 'doctor' && (
+                                <div className="flex gap-3">
+                                    <button
+                                        onClick={() => toggleEmergencyRelevant(selectedReport._id)}
+                                        className={clsx(
+                                            "flex-1 py-3 rounded-xl font-medium transition-colors flex items-center justify-center gap-2",
+                                            selectedReport.isEmergencyRelevant
+                                                ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
+                                                : isDarkMode
+                                                    ? "bg-slate-700 text-white hover:bg-slate-600"
+                                                    : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                                        )}
+                                    >
+                                        <Star className={clsx("w-4 h-4", selectedReport.isEmergencyRelevant && "fill-current")} />
+                                        {selectedReport.isEmergencyRelevant ? 'Remove from Emergency' : 'Add to Emergency'}
+                                    </button>
+                                    <button
+                                        onClick={() => { handleDelete(selectedReport._id); }}
+                                        className="px-6 py-3 bg-red-600 text-white rounded-xl font-medium hover:bg-red-700 transition-colors flex items-center gap-2"
+                                    >
+                                        <Trash2 className="w-4 h-4" />
+                                        Delete
+                                    </button>
+                                </div>
+                            )}
                         </motion.div>
                     </motion.div>
                 )}

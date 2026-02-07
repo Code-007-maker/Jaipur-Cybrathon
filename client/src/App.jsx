@@ -20,6 +20,12 @@ const ProtectedRoute = ({ children }) => {
   return isAuthenticated ? children : <Navigate to="/login" />;
 };
 
+// Dashboard Redirect for Doctors
+const DashboardRedirect = () => {
+  const { user } = useAuth();
+  return user?.role === 'doctor' ? <Navigate to="/reports" /> : <Dashboard />;
+};
+
 function App() {
   return (
     <Router>
@@ -36,7 +42,7 @@ function App() {
 
                 <Route path="/" element={
                   <ProtectedRoute>
-                    <Dashboard />
+                    <DashboardRedirect />
                   </ProtectedRoute>
                 } />
 

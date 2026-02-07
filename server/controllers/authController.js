@@ -40,7 +40,14 @@ exports.register = async (req, res) => {
         }
 
         console.log("Step 4: Signing JWT...");
-        const payload = { user: { id: user.id } };
+        const payload = {
+            user: {
+                id: user.id,
+                name: user.name,
+                email: user.email,
+                role: user.role || 'patient'
+            }
+        };
         jwt.sign(payload, secret, { expiresIn: 360000 }, (err, token) => {
             if (err) {
                 console.error("JWT Signing Error:", err);
@@ -104,7 +111,14 @@ exports.login = async (req, res) => {
             return res.status(400).json({ msg: 'Invalid Credentials' });
         }
 
-        const payload = { user: { id: user.id } };
+        const payload = {
+            user: {
+                id: user.id,
+                name: user.name,
+                email: user.email,
+                role: user.role
+            }
+        };
         jwt.sign(payload, secret, { expiresIn: 360000 }, (err, token) => {
             if (err) {
                 console.error("JWT Signing Error:", err);
@@ -129,13 +143,13 @@ exports.getUser = async (req, res) => {
 
         // If the token indicates a doctor role (temporary access), override the role
         if (req.user.role === 'doctor' && req.user.isTemporary) {
+            user.patientName = user.name; // Keep original user name as patient name
+            user.name = `Dr. ${req.user.doctorName}`; // Set name to doctor name
             user.role = 'doctor';
             user.doctorName = req.user.doctorName;
             user.doctorEmail = req.user.doctorEmail;
             user.isTemporary = true;
-            // The expiresAt is in the token itself, but for the frontend calculation 
-            // we can re-extract it or rely on the frontend storing it from the initial verify call.
-            // Actually, we can add it here if we want to be safe on refresh.
+
             const token = req.header('x-auth-token');
             const decoded = jwt.decode(token);
             if (decoded && decoded.exp) {

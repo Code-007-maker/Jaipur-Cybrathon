@@ -44,7 +44,27 @@ const HealthReportSchema = new mongoose.Schema({
     uploadedAt: {
         type: Date,
         default: Date.now
-    }
+    },
+    notes: [
+        {
+            doctorName: {
+                type: String,
+                required: true
+            },
+            doctorEmail: {
+                type: String,
+                required: true
+            },
+            content: {
+                type: String,
+                required: true
+            },
+            createdAt: {
+                type: Date,
+                default: Date.now
+            }
+        }
+    ]
 });
 
 // Index for faster queries
