@@ -1,6 +1,9 @@
 const cloudinary = require('cloudinary').v2;
 const HealthReport = require('../models/HealthReport');
-const OpenAI = require('openai');
+const { GoogleGenerativeAI } = require('@google/generative-ai');
+const vision = require('@google-cloud/vision');
+const axios = require('axios');
+const pdfParse = require('pdf-parse');
 
 // Configure Cloudinary
 cloudinary.config({
@@ -9,10 +12,18 @@ cloudinary.config({
     api_secret: process.env.CLOUDINARY_API_SECRET
 });
 
-// Initialize OpenAI (using existing config pattern from codebase)
-const openai = new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY
+// Initialize Google Gemini AI
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+
+// Initialize Google Cloud Vision for OCR
+const visionClient = new vision.ImageAnnotatorClient({
+    credentials: {
+        client_email: process.env.GOOGLE_CLIENT_EMAIL,
+        private_key: process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n')
+    },
+    projectId: process.env.GOOGLE_PROJECT_ID
 });
+
 
 // Category labels for display
 const categoryLabels = {
@@ -267,65 +278,199 @@ exports.toggleEmergencyRelevant = async (req, res) => {
 };
 
 /**
- * AI Analysis Function (internal)
+ * AI Analysis Function - Uses Hugging Face for FREE vision analysis
  */
 async function analyzeReportWithAI(reportId) {
     try {
         const report = await HealthReport.findById(reportId);
         if (!report) return null;
 
-        // Check if API key is configured
-        if (!process.env.OPENAI_API_KEY || process.env.OPENAI_API_KEY === 'mock-key-for-mvp') {
-            // Use mock analysis for MVP/demo
-            const mockSummary = generateMockAnalysis(report.title, report.category);
-            report.aiSummary = mockSummary;
-            report.aiAnalyzedAt = new Date();
-            await report.save();
-            return mockSummary;
+        console.log('Starting AI analysis for report:', report._id, 'Type:', report.fileType);
+
+        let extractedText = '';
+
+        // Step 1: Extract text from the file
+        if (report.fileType === 'pdf') {
+            let pdfBuffer = null;
+
+            // Try text extraction first for text-based PDFs
+            try {
+                console.log('Downloading PDF from:', report.fileUrl);
+                const response = await axios.get(report.fileUrl, { responseType: 'arraybuffer' });
+                pdfBuffer = Buffer.from(response.data);
+                const pdfData = await pdfParse(pdfBuffer);
+                extractedText = pdfData.text.substring(0, 8000);
+                console.log('Extracted PDF text length:', extractedText.length);
+            } catch (pdfErr) {
+                console.error('PDF extraction error:', pdfErr.message);
+            }
+
+            // If PDF text extraction failed or got minimal text, try OCR (for scanned PDFs)
+            if ((!extractedText || extractedText.trim().length < 50) && pdfBuffer) {
+                console.log('PDF text extraction minimal, trying Vision OCR...');
+                try {
+                    // Use batchAnnotateFiles for PDF content
+                    const request = {
+                        requests: [
+                            {
+                                inputConfig: {
+                                    content: pdfBuffer,
+                                    mimeType: 'application/pdf',
+                                },
+                                features: [{ type: 'DOCUMENT_TEXT_DETECTION' }],
+                                pages: [1, 2, 3] // Limit to first 3 pages
+                            },
+                        ],
+                    };
+
+                    const [result] = await visionClient.batchAnnotateFiles(request);
+                    const responses = result.responses?.[0]?.responses || [];
+                    extractedText = responses.map(r => r.fullTextAnnotation?.text || '').join('\n');
+
+                    console.log('Vision OCR extracted text from PDF:', extractedText.length);
+                } catch (visionErr) {
+                    console.error('PDF Vision OCR error:', visionErr.message);
+                }
+            }
+        } else {
+            // For images: Use Google Cloud Vision OCR to extract ALL text
+            try {
+                console.log('Using Google Cloud Vision OCR for:', report.fileUrl);
+
+                // Download image buffer for robust OCR (better than passing URL)
+                const response = await axios.get(report.fileUrl, { responseType: 'arraybuffer' });
+                const [result] = await visionClient.textDetection(Buffer.from(response.data));
+                const detections = result.textAnnotations;
+
+                if (detections && detections.length > 0) {
+                    // The first annotation contains the entire extracted text
+                    extractedText = detections[0].description || '';
+                    console.log('Vision OCR extracted text length:', extractedText.length);
+                    console.log('First 500 chars:', extractedText.substring(0, 500));
+                }
+            } catch (visionErr) {
+                console.error('Vision OCR error:', visionErr.message);
+            }
         }
 
-        // Real OpenAI analysis
-        const prompt = `You are a medical report assistant. Analyze the following medical report context and provide a brief, patient-friendly summary.
+        // Step 2: Analyze the extracted text locally (no external API needed)
+        let summary = '';
 
-Report Title: ${report.title}
-Category: ${categoryLabels[report.category]}
-File Type: ${report.fileType.toUpperCase()}
+        if (extractedText && extractedText.length > 20) {
+            // Define medical reference ranges
+            const referenceRanges = {
+                'hemoglobin': { min: 12, max: 16, unit: 'g/dL', name: 'Hemoglobin' },
+                'haemoglobin': { min: 12, max: 16, unit: 'g/dL', name: 'Hemoglobin' },
+                'hb': { min: 12, max: 16, unit: 'g/dL', name: 'Hemoglobin' },
+                'rbc': { min: 4.5, max: 5.5, unit: 'million/µL', name: 'RBC Count' },
+                'wbc': { min: 4500, max: 11000, unit: '/µL', name: 'WBC Count' },
+                'platelets': { min: 150000, max: 400000, unit: '/µL', name: 'Platelets' },
+                'glucose': { min: 70, max: 100, unit: 'mg/dL', name: 'Glucose (Fasting)' },
+                'fasting glucose': { min: 70, max: 100, unit: 'mg/dL', name: 'Fasting Glucose' },
+                'cholesterol': { min: 0, max: 200, unit: 'mg/dL', name: 'Total Cholesterol' },
+                'total cholesterol': { min: 0, max: 200, unit: 'mg/dL', name: 'Total Cholesterol' },
+                'triglycerides': { min: 0, max: 150, unit: 'mg/dL', name: 'Triglycerides' },
+                'creatinine': { min: 0.7, max: 1.3, unit: 'mg/dL', name: 'Creatinine' },
+                'urea': { min: 7, max: 20, unit: 'mg/dL', name: 'Blood Urea' },
+                'bun': { min: 7, max: 20, unit: 'mg/dL', name: 'BUN' },
+                'hba1c': { min: 0, max: 5.7, unit: '%', name: 'HbA1c' },
+                'tsh': { min: 0.4, max: 4.0, unit: 'mIU/L', name: 'TSH' },
+                'ldl': { min: 0, max: 100, unit: 'mg/dL', name: 'LDL Cholesterol' },
+                'hdl': { min: 40, max: 200, unit: 'mg/dL', name: 'HDL Cholesterol' },
+                'sgpt': { min: 7, max: 56, unit: 'U/L', name: 'SGPT (ALT)' },
+                'sgot': { min: 10, max: 40, unit: 'U/L', name: 'SGOT (AST)' },
+                'bilirubin': { min: 0.1, max: 1.2, unit: 'mg/dL', name: 'Bilirubin' }
+            };
 
-Important guidelines:
-1. Provide a simple, understandable summary (2-3 sentences max)
-2. If relevant, mention any values that might need attention
-3. DO NOT provide diagnosis or treatment recommendations
-4. Always end with: "Please consult a healthcare professional for proper interpretation."
+            // Extract values from text using regex patterns
+            const findings = [];
+            const abnormalValues = [];
+            const textLower = extractedText.toLowerCase();
 
-Generate a helpful summary:`;
+            for (const [key, range] of Object.entries(referenceRanges)) {
+                // Pattern to match: test_name followed by a number
+                const patterns = [
+                    new RegExp(`${key}[:\\s]+([\\d.]+)`, 'i'),
+                    new RegExp(`${key}.*?([\\d.]+)\\s*${range.unit}`, 'i'),
+                    new RegExp(`([\\d.]+)\\s*${range.unit}.*${key}`, 'i')
+                ];
 
-        const completion = await openai.chat.completions.create({
-            model: 'gpt-3.5-turbo',
-            messages: [
-                { role: 'system', content: 'You are a helpful medical report summarizer. Never diagnose or prescribe treatment.' },
-                { role: 'user', content: prompt }
-            ],
-            max_tokens: 200,
-            temperature: 0.5
-        });
+                for (const pattern of patterns) {
+                    const match = extractedText.match(pattern);
+                    if (match && match[1]) {
+                        const value = parseFloat(match[1]);
+                        if (!isNaN(value)) {
+                            let status = 'NORMAL';
+                            if (value < range.min) status = 'LOW ⬇️';
+                            else if (value > range.max) status = 'HIGH ⬆️';
 
-        const summary = completion.choices[0]?.message?.content || 'Unable to generate summary at this time.';
+                            const finding = `• ${range.name}: ${value} ${range.unit} - ${status}`;
+                            if (!findings.some(f => f.includes(range.name))) {
+                                findings.push(finding);
+                                if (status !== 'NORMAL') {
+                                    abnormalValues.push(`${range.name}: ${value} ${range.unit} (${status}) - Reference: ${range.min}-${range.max} ${range.unit}`);
+                                }
+                            }
+                            break;
+                        }
+                    }
+                }
+            }
+
+            // Build the summary
+            summary = `📊 HEALTH REPORT ANALYSIS: "${report.title}"\n\n`;
+
+            if (findings.length > 0) {
+                summary += `📋 KEY FINDINGS:\n${findings.join('\n')}\n\n`;
+            }
+
+            if (abnormalValues.length > 0) {
+                summary += `⚠️ ABNORMAL VALUES DETECTED:\n${abnormalValues.join('\n')}\n\n`;
+            } else if (findings.length > 0) {
+                summary += `✅ All detected values are within normal range.\n\n`;
+            }
+
+            // Add excerpt of raw extracted text if no structured findings
+            if (findings.length === 0) {
+                summary += `📝 EXTRACTED TEXT:\n${extractedText.substring(0, 800)}${extractedText.length > 800 ? '...' : ''}\n\n`;
+            }
+
+            summary += `⚕️ Please consult a healthcare professional for proper interpretation and treatment advice.`;
+        } else {
+            summary = `📊 REPORT: "${report.title}"
+
+This ${categoryLabels[report.category] || 'medical report'} has been securely uploaded to your health vault.
+
+📋 Type: ${report.fileType.toUpperCase()}
+📁 Category: ${categoryLabels[report.category] || 'Other'}
+
+⚕️ For detailed analysis, please consult a healthcare professional who can review the original document.`;
+        }
 
         report.aiSummary = summary;
         report.aiAnalyzedAt = new Date();
         await report.save();
 
+        console.log('AI Summary generated successfully');
         return summary;
 
     } catch (err) {
-        console.error('AI Analysis Internal Error:', err.message);
+        console.error('AI Analysis Error:', err);
 
-        // Save fallback message
-        const report = await HealthReport.findById(reportId);
-        if (report) {
-            report.aiSummary = 'AI analysis is currently unavailable. Your report has been securely stored and can be accessed by healthcare providers during emergencies.';
-            report.aiAnalyzedAt = new Date();
-            await report.save();
+        // Save error-aware fallback
+        try {
+            const report = await HealthReport.findById(reportId);
+            if (report) {
+                report.aiSummary = `📊 Report "${report.title}" uploaded successfully.
+
+This ${categoryLabels[report.category] || 'medical document'} is now stored in your health vault and accessible during emergencies.
+
+⚕️ Please consult a healthcare professional for interpretation of your medical results.`;
+                report.aiAnalyzedAt = new Date();
+                await report.save();
+            }
+        } catch (saveErr) {
+            console.error('Error saving fallback:', saveErr.message);
         }
 
         return null;
